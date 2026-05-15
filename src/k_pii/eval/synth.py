@@ -60,7 +60,11 @@ _NAMES = [
 ]
 
 _TITLES_GOV_POOL = ["과장", "사무관", "주무관", "서기관", "국장", "팀장"]
+_TITLES_POLICE_POOL = ["경감", "경위", "경정", "총경"]
+_TITLES_FIRE_POOL = ["소방위", "소방경", "소방령"]
+_TITLES_MILITARY_POOL = ["대위", "소령", "대령"]
 _AGENCIES_POOL = ["기획재정부", "행정안전부", "보건복지부", "법무부", "교육부"]
+_AGENCY_ABBREV_POOL = ["기재부", "행안부", "복지부", "국토부", "과기정통부"]
 
 
 @dataclass
@@ -195,11 +199,68 @@ def _meeting_minutes(rnd: random.Random) -> GoldDocument:
     })
 
 
+def _police_report(rnd: random.Random) -> GoldDocument:
+    """경찰서 사건 보고서 템플릿 (특정직 직급 + 약칭)."""
+    name = rnd.choice(_NAMES)
+    rank = rnd.choice(["경감", "경위", "경정", "총경"])
+    rrn = rnd.choice(_RRN_SAMPLES)
+    phone = rnd.choice(_PHONE_MOBILE)
+    abbrev = rnd.choice(_AGENCY_ABBREV_POOL)
+    docnum = f"{abbrev}-수사과-2024-{rnd.randint(10000, 99999)}"
+
+    parts = [
+        ("[경찰 사건 처리 보고서]\n\n", None),
+        ("문서번호: ", None),
+        (docnum, "DOC_ID"),
+        ("\n수사관: ", None),
+        (name, "PERSON"),
+        (f" {rank}\n\n", None),
+        ("피의자 정보:\n", None),
+        ("성명: ", None),
+        (rnd.choice([n for n in _NAMES if n != name]), "PERSON"),
+        ("\n주민등록번호: ", None),
+        (rrn, "RRN"),
+        ("\n연락처: ", None),
+        (phone, "PHONE"),
+        ("\n\n조사 내용: 본 건은 일반 조사 단계임.\n", None),
+    ]
+    return _assemble(parts, template="police_report", pii_labels={
+        "PERSON", "RRN", "PHONE", "DOC_ID",
+    })
+
+
+def _fire_dispatch(rnd: random.Random) -> GoldDocument:
+    """소방 출동 보고서 템플릿."""
+    name = rnd.choice(_NAMES)
+    rank = rnd.choice(_TITLES_FIRE_POOL)
+    addr = rnd.choice(_ADDR_ROAD)
+    phone = rnd.choice(_PHONE_LANDLINE)
+
+    parts = [
+        ("[소방 출동 보고]\n\n", None),
+        ("출동대장: ", None),
+        (name, "PERSON"),
+        (f" {rank}\n", None),
+        ("신고자: ", None),
+        (rnd.choice([n for n in _NAMES if n != name]), "PERSON"),
+        ("\n신고지: ", None),
+        (addr, "ADDRESS"),
+        ("\n연락처: ", None),
+        (phone, "PHONE"),
+        ("\n\n상황 종료 보고서 첨부.\n", None),
+    ]
+    return _assemble(parts, template="fire_dispatch", pii_labels={
+        "PERSON", "ADDRESS", "PHONE",
+    })
+
+
 _TEMPLATES: tuple[Callable[[random.Random], GoldDocument], ...] = (
     _gov_decree,
     _civil_petition,
     _hr_review,
     _meeting_minutes,
+    _police_report,
+    _fire_dispatch,
 )
 
 
@@ -238,6 +299,8 @@ def generate_document(seed: int | None = None, template: str | None = None) -> G
             "civil_petition": _civil_petition,
             "hr_review": _hr_review,
             "meeting_minutes": _meeting_minutes,
+            "police_report": _police_report,
+            "fire_dispatch": _fire_dispatch,
         }
         if template not in mapping:
             raise ValueError(f"Unknown template: {template}")

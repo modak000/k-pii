@@ -20,7 +20,9 @@ from k_pii.context.name_dictionary import NameDictionary
 from k_pii.context.particles import strip_trailing_particle
 from k_pii.core.types import DetectionResult, RiskLevel
 from k_pii.dictionaries.agencies import is_agency
+from k_pii.dictionaries.agency_abbrev import normalize_agency
 from k_pii.dictionaries.common_words import is_common_word
+from k_pii.dictionaries.districts import is_district, is_province
 from k_pii.dictionaries.field_labels import is_field_label
 from k_pii.dictionaries.surnames import surname_prefix_len
 from k_pii.dictionaries.titles import is_title
@@ -39,14 +41,20 @@ _DETERMINISTIC_HINTS = re.compile(
     r"|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"  # email
 )
 
-# 한국어 동사/형용사 어미·연결형. 이름은 거의 이 형태로 끝나지 않음.
+# 한국어 동사/형용사·계사(이다) 활용형. 이름은 거의 이 형태로 끝나지 않음.
 _VERB_LIKE_SUFFIXES = (
+    # 하다 활용
     "하다", "하고", "하여", "하지", "하니", "하면", "한다", "한", "할", "함",
     "하기", "하는", "하신", "하시", "하셨", "하셔", "하게", "하며", "하면서",
     "했다", "했고", "했지", "했음", "했으며",
+    # 되다 활용
     "되다", "되고", "되어", "되지", "되니", "되면", "된다", "된", "될", "됨",
     "되기", "되는", "되며", "되었",
+    # 드리다 활용
     "드린", "드리는", "드리고", "드립니다", "드린다", "드리며",
+    # 이다 계사 + 명사화 (단계임/사실임/현실임 등)
+    "임", "임을", "임에", "임으로", "임에도", "임이",
+    "인", "인지", "인데", "인가", "이라",
 )
 
 
@@ -101,7 +109,11 @@ def _detect_with_dict(
         # like an administrative-unit name (경기도, 성남시, 가평군) — unless
         # a person-field label is right before.
         if not label_before:
+            # Reject any token that is a known agency (full or abbreviation),
+            # district, province, or street/admin-unit by suffix shape.
             if (is_agency(raw)
+                    or normalize_agency(raw) is not None
+                    or is_province(raw) or is_district(raw)
                     or _looks_like_admin_unit(raw)
                     or _looks_like_street_name(raw)):
                 continue
@@ -157,13 +169,12 @@ def _detect_with_dict(
             yield _emit(cand, particle, rescored.value, rescored.evidence)
 
 
+from k_pii.dictionaries.field_labels import FIELD_LABELS_NAME
+
+
 def _label_before(text: str, start: int) -> bool:
     head = text[max(0, start - 10): start]
-    return any(lbl in head for lbl in (
-        "성명", "이름", "성함", "신청인", "신청자", "민원인",
-        "기안자", "결재자", "보호자", "대리인", "참석자",
-        "당사자", "원고", "피고", "환자", "수신자",
-    ))
+    return any(lbl in head for lbl in FIELD_LABELS_NAME)
 
 
 def _is_within(

@@ -17,6 +17,7 @@ import re
 from typing import Iterator
 
 from k_pii.core.types import DetectionResult, RiskLevel
+from k_pii.dictionaries.agency_abbrev import is_doc_id_prefix, normalize_agency
 
 LABEL = "DOC_ID"
 LEGAL_BASIS = "개인정보보호법 제2조"
@@ -27,7 +28,7 @@ CATEGORY = "참조정보"
 _DOC_ID = re.compile(
     r"(?<![A-Za-z0-9가-힣])"
     r"("
-    r"[가-힣]{2,6}"        # 기관/부서 약어 1
+    r"([가-힣]{2,6})"        # 기관/부서 약어
     r"-"
     r"[가-힣A-Za-z0-9]{2,10}"  # 부서/팀
     r"-"
@@ -41,17 +42,33 @@ _DOC_ID = re.compile(
 
 def detect(text: str) -> Iterator[DetectionResult]:
     for m in _DOC_ID.finditer(text):
+        prefix = m.group(2)
+        # Boost confidence when prefix is a recognized agency/abbrev.
+        if is_doc_id_prefix(prefix):
+            confidence = 0.95
+            normalized = normalize_agency(prefix) or prefix
+            evidence = [
+                "pattern:doc_id",
+                "domain:government",
+                f"agency_known:{normalized}",
+            ]
+        else:
+            confidence = 0.85
+            normalized = None
+            evidence = ["pattern:doc_id", "domain:government"]
         yield DetectionResult(
             label=LABEL,
             text=m.group(1),
             start=m.start(),
             end=m.end(),
             risk_level=RiskLevel.LOW,
-            confidence=0.85,
-            evidence=["pattern:doc_id", "domain:government"],
+            confidence=confidence,
+            evidence=evidence,
             legal_basis=LEGAL_BASIS,
             extra={
                 "category": CATEGORY,
                 "domain": "government",
+                "agency_prefix": prefix,
+                "agency_normalized": normalized,
             },
         )

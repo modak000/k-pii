@@ -42,11 +42,10 @@ class Score:
 
 def _has_field_label_before(text: str, start: int, window: int = 6) -> str | None:
     """Look for a name-field label like "성명:" within ``window`` chars before."""
+    from k_pii.dictionaries.field_labels import FIELD_LABELS_NAME
     head = text[max(0, start - window - 4): start]
     # Strip whitespace and common separators
-    for label in ("성명", "이름", "성함", "신청인", "신청자", "민원인",
-                  "기안자", "결재자", "보호자", "대리인", "참석자",
-                  "당사자", "원고", "피고", "환자", "수신자"):
+    for label in FIELD_LABELS_NAME:
         # Allow "성명:", "성명 :", "성명 ", etc.
         idx = head.rfind(label)
         if idx == -1:

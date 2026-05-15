@@ -42,3 +42,28 @@ class TestDocIdStructure:
         r = _d("기재부-인사-2024-00123")[0]
         assert r.legal_basis == "개인정보보호법 제2조"
         assert r.extra["domain"] == "government"
+
+
+class TestDocIdAgencyBoost:
+    def test_known_agency_high_confidence(self):
+        r = _d("기재부-인사-2024-00123")[0]
+        assert r.confidence == 0.95
+        assert r.extra["agency_prefix"] == "기재부"
+        assert r.extra["agency_normalized"] == "기획재정부"
+        assert any("agency_known:" in e for e in r.evidence)
+
+    def test_full_name_prefix_recognized(self):
+        r = _d("기획재정부-인사-2024-00123")[0]
+        assert r.confidence == 0.95
+        assert r.extra["agency_normalized"] == "기획재정부"
+
+    def test_unknown_agency_default_confidence(self):
+        r = _d("외계청-부서-2024-00123")[0]
+        assert r.confidence == 0.85
+        assert r.extra["agency_normalized"] is None
+
+    def test_various_agency_abbrevs(self):
+        for abbrev in ("행안부", "복지부", "국토부", "산업부", "방사청"):
+            results = _d(f"{abbrev}-총무과-2024-00567")
+            assert len(results) == 1
+            assert results[0].confidence == 0.95
