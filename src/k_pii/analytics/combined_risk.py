@@ -51,6 +51,7 @@ _LABEL_TO_CLASS: dict[str, AttributeClass] = {
     "IP": AttributeClass.QUASI_IDENTIFIER,
     # 민감속성 (보호 대상)
     "MEDICAL_INSURANCE": AttributeClass.SENSITIVE,
+    "PRESCRIPTION_ID": AttributeClass.SENSITIVE,
     # 일반·참조
     "URL": AttributeClass.GENERAL,
     "FAX": AttributeClass.GENERAL,

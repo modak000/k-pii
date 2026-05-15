@@ -30,13 +30,18 @@ class TestDriverLicensePositive:
         assert len(results) == 1
         assert results[0].extra["region_code"] == "28"
 
-    def test_no_hyphens(self):
-        results = _detect_list("119012345678")
+    def test_no_hyphens_requires_keyword(self):
+        # 하이픈 없는 12자리는 키워드 anchor 필수 (처방번호 등과 충돌 방지)
+        assert _detect_list("119012345678") == []
+        results = _detect_list("운전면허 119012345678")
         assert len(results) == 1
         assert results[0].extra["region_code"] == "11"
+        assert results[0].extra["format"] == "compact"
 
-    def test_partial_hyphens(self):
-        results = _detect_list("11-9012345678")
+    def test_partial_hyphens_not_supported(self):
+        # 부분 하이픈은 더 이상 지원 안 함 — 전체 하이픈 또는 키워드 anchor 필요
+        assert _detect_list("11-9012345678") == []
+        results = _detect_list("면허번호 11-90-123456-78")
         assert len(results) == 1
 
     def test_legal_basis_attached(self):

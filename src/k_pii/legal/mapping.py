@@ -39,6 +39,7 @@ LEGAL_BASIS_BY_LABEL: dict[str, str] = {
     "PETITION_ID": "개인정보보호법 제2조; 민원처리에 관한 법률",
     "EMPLOYEE_ID": "개인정보보호법 제2조; 국가공무원법 제22조",
     "PNU": "공간정보의 구축 및 관리 등에 관한 법률; 개인정보보호법 제2조",
+    "PRESCRIPTION_ID": "의료법 제18조; 약사법 제22조; 개인정보보호법 제23조",
 }
 
 CATEGORY_BY_LABEL: dict[str, str] = {
@@ -64,6 +65,7 @@ CATEGORY_BY_LABEL: dict[str, str] = {
     "PETITION_ID": "참조정보",
     "EMPLOYEE_ID": "일반개인정보",
     "PNU": "참조정보",
+    "PRESCRIPTION_ID": "민감정보(건강)",
 }
 
 _RISK_FLOOR_BY_LABEL: dict[str, RiskLevel] = {
@@ -89,6 +91,7 @@ _RISK_FLOOR_BY_LABEL: dict[str, RiskLevel] = {
     "PETITION_ID": RiskLevel.LOW,
     "EMPLOYEE_ID": RiskLevel.MEDIUM,
     "PNU": RiskLevel.LOW,
+    "PRESCRIPTION_ID": RiskLevel.HIGH,
 }
 
 
