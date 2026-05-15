@@ -28,13 +28,13 @@ class TestRRNPositive:
         assert results[0].legal_basis == "개인정보보호법 제24조의2"
         assert results[0].extra["category"] == "고유식별정보"
 
-    def test_foreigner_rrn(self):
-        # gender_digit 5 → 1900s foreigner male
-        results = _detect_list("외국인등록번호 850315-5345676")
-        assert len(results) == 1
-        assert results[0].extra["gender_digit"] == 5
-        assert results[0].extra["birth_date"] == "1985-03-15"
-        assert results[0].extra["checksum_valid"] is True
+    def test_foreigner_gender_digits_skipped(self):
+        # gender_digit ∈ {5,6,7,8} = foreigner, handled by patterns.frn —
+        # the RRN detector must not claim these.
+        assert _detect_list("850315-5345676") == []  # foreigner male, 1900s
+        assert _detect_list("850315-6000008") == []  # foreigner female, 1900s
+        assert _detect_list("000101-7000009") == []  # foreigner male, 2000s
+        assert _detect_list("000101-8000001") == []  # foreigner female, 2000s
 
     def test_multiple_rrns_in_one_text(self):
         text = "신청인 880101-1234568, 보호자 950101-2345676 동의함"
