@@ -150,6 +150,7 @@ def evaluate_person(
     mode: str = "partial",
     sample_limit: int | None = None,
     fullname_only: bool = True,
+    korean_only: bool = False,
 ) -> NerEvalReport:
     """k-pii PERSON 검출을 KLUE-NER PS 라벨에 대해 평가.
 
@@ -174,7 +175,13 @@ def evaluate_person(
             return True
         if len(text) < 2 or len(text) > 5:
             return False
-        return all("가" <= ch <= "힣" for ch in text)
+        if not all("가" <= ch <= "힣" for ch in text):
+            return False
+        if korean_only:
+            # Method 7: 한국 이름만 평가 (외국인명 제외)
+            from k_pii.context.name_origin import classify_name_origin
+            return classify_name_origin(text) == "korean"
+        return True
 
     for sent in sentences_list:
         report.sentence_count += 1
@@ -182,7 +189,15 @@ def evaluate_person(
             s for s in sent.spans
             if s.label == "PS" and _is_valid_korean_fullname(s.text)
         ]
-        predicted = list(detect_person(sent.text))
+        predicted_raw = list(detect_person(sent.text))
+        # korean_only 모드면 외국인 origin 검출도 평가에서 제외
+        if korean_only:
+            predicted = [
+                p for p in predicted_raw
+                if p.extra.get("origin") != "foreign"
+            ]
+        else:
+            predicted = predicted_raw
 
         matched_pred: set[int] = set()
         for g in gold_persons:

@@ -36,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="평가할 문장 수 (디버그용)")
     p.add_argument("--all-labels", action="store_true",
                    help="모든 PS span 평가 (영문 1자·외래어 포함). 기본은 한글 풀네임만.")
+    p.add_argument("--korean-only", action="store_true",
+                   help="한국 인명만 평가 (외국인·가공인물 제외) — 본 라이브러리 정책 대상")
     p.add_argument("--show-errors", type=int, default=0,
                    help="FN/FP 샘플 N개씩 출력")
     args = p.parse_args(argv)
@@ -49,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         mode=args.mode,
         sample_limit=args.limit,
         fullname_only=not args.all_labels,
+        korean_only=args.korean_only,
     )
     print()
     print(report.format())

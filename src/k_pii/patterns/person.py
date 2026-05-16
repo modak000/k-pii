@@ -17,6 +17,8 @@ from typing import Iterable, Iterator
 
 from k_pii.context.context_rules import NameCandidate, score_candidate
 from k_pii.context.name_dictionary import NameDictionary
+from k_pii.context.name_origin import classify_name_origin
+from k_pii.context.name_syllables import name_shape_bonus
 from k_pii.context.particles import strip_trailing_particle
 from k_pii.core.types import DetectionResult, RiskLevel
 from k_pii.dictionaries.agencies import is_agency
@@ -221,6 +223,7 @@ def _detect_with_dict(
     threshold = 0.50
 
     pending: list[tuple[NameCandidate, float, list[str], str | None]] = []
+    emitted: list[tuple] = []  # (cand, particle, score, evidence)
     # ------ Pass A
     for m in _CANDIDATE.finditer(text):
         raw = m.group(1)
@@ -282,7 +285,7 @@ def _detect_with_dict(
         cand_end = m.start() + len(stem)
         cand = NameCandidate(name=stem, start=cand_start, end=cand_end)
         det_nearby = _is_within(deterministic_spans, cand_start, window=25)
-        # 추가 신호: 토큰 안 직책, 이름끝 음절, 나이/성별 인접
+        # 추가 신호: 토큰 안 직책, 이름끝 음절, 나이/성별 인접, 음절 통계
         extra_signals: list[str] = []
         extra_score = 0.0
         if embedded_title:
@@ -291,6 +294,11 @@ def _detect_with_dict(
         if _has_name_like_final(stem):
             extra_score += 0.10
             extra_signals.append("pos:name_final_syllable")
+        # Method 1: 음절 통계 likelihood
+        shape_bonus = name_shape_bonus(stem)
+        if shape_bonus > 0:
+            extra_score += shape_bonus
+            extra_signals.append(f"pos:name_likelihood({shape_bonus:.2f})")
         # 원본 토큰 끝(particle 포함) 다음 위치에서 나이/성별 단서
         age_gender = _has_age_or_gender_after(text, m.end())
         if age_gender:
@@ -323,12 +331,40 @@ def _detect_with_dict(
             name_dict.add(
                 stem, total_value, (cand_start, cand_end), total_evidence
             )
-            yield _emit(cand, particle, total_value, total_evidence)
+            emitted.append((cand, particle, total_value, total_evidence))
         else:
             pending.append((cand, total_value, total_evidence, particle))
 
-    # ------ Pass B: re-score pending using the now-populated dictionary
-    for cand, _score_a, ev_a, particle in pending:
+    # ------ Method 2: 같은 문장 내 후보 상호 보강 (Co-occurrence Boost)
+    # Pass A 에서 *높은 신뢰* PERSON 이 잡힌 문장의 *약한 후보* 들도 +0.15
+    # 보강 후 임계값 재평가.
+    sentence_boundaries = _find_sentence_boundaries(text)
+    strong_sentence_ids: set[int] = set()
+    for cand, _p, score_v, _ev in emitted:
+        if score_v >= 0.70:
+            sid = _sentence_id(cand.start, sentence_boundaries)
+            strong_sentence_ids.add(sid)
+
+    co_boosted: list[tuple] = []
+    still_pending: list[tuple] = []
+    for cand, score_v, ev, particle in pending:
+        sid = _sentence_id(cand.start, sentence_boundaries)
+        if sid in strong_sentence_ids:
+            boosted_score = min(1.0, score_v + 0.15)
+            boosted_ev = list(ev) + ["pos:co_occurrence_in_sentence"]
+            if boosted_score >= threshold:
+                co_boosted.append((cand, particle, boosted_score, boosted_ev))
+                name_dict.add(cand.name, boosted_score,
+                              (cand.start, cand.end), boosted_ev)
+                continue
+        still_pending.append((cand, score_v, ev, particle))
+
+    # 모두 emit
+    for cand, particle, score_v, ev in emitted + co_boosted:
+        yield _emit(cand, particle, score_v, ev)
+
+    # ------ Pass B: re-score remaining pending using the now-populated dictionary
+    for cand, _score_a, ev_a, particle in still_pending:
         boost = name_dict.boost_for(cand.name)
         if boost <= 0:
             continue
@@ -366,6 +402,7 @@ def _emit(
     score: float,
     evidence: list[str],
 ) -> DetectionResult:
+    origin = classify_name_origin(cand.name)
     return DetectionResult(
         label=LABEL,
         text=cand.name,
@@ -373,10 +410,32 @@ def _emit(
         end=cand.end,
         risk_level=RiskLevel.HIGH,
         confidence=score,
-        evidence=evidence,
+        evidence=evidence + [f"origin:{origin}"],
         legal_basis=LEGAL_BASIS,
         extra={
             "category": CATEGORY,
             "particle": particle,
+            "origin": origin,
         },
     )
+
+
+# ---------------------------------------------------------------------
+# Method 2 보조: 문장 경계 (마침표·줄바꿈·물음표·느낌표)
+# ---------------------------------------------------------------------
+
+def _find_sentence_boundaries(text: str) -> list[int]:
+    """Return list of sentence start offsets (sorted)."""
+    starts = [0]
+    for i, ch in enumerate(text):
+        if ch in ".!?\n":
+            if i + 1 < len(text):
+                starts.append(i + 1)
+    return starts
+
+
+def _sentence_id(pos: int, boundaries: list[int]) -> int:
+    """Return the sentence index (0-based) containing `pos`."""
+    import bisect
+    idx = bisect.bisect_right(boundaries, pos) - 1
+    return max(0, idx)
