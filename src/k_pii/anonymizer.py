@@ -71,6 +71,8 @@ class Anonymizer:
         vault: Optional[ReversibleVault] = None,
         include: Optional[Iterable[str]] = None,
         exclude: Optional[Iterable[str]] = None,
+        secondary_detector=None,
+        merge_mode: str = "union",
     ):
         if strategy not in {"tokenize", "redact", "asterisk", "hashed",
                             "partial", "fpe"}:
@@ -81,13 +83,28 @@ class Anonymizer:
         self.vault = vault if vault is not None else ReversibleVault()
         self.include = list(include) if include else None
         self.exclude = list(exclude) if exclude else None
+        self.secondary_detector = secondary_detector
+        self.merge_mode = merge_mode
 
     # ------------------------------------------------------------ public
 
     def process(self, text: str) -> AnonymizationResult:
-        detections = detect_all(
+        primary = detect_all(
             text, include=self.include, exclude=self.exclude
         )
+        # Optional secondary detector (ML 어댑터 등) 가 있으면 결과 병합
+        if self.secondary_detector is not None:
+            from k_pii.integrations.hybrid import MergeMode, merge_detections
+            secondary = list(self.secondary_detector.detect(text))
+            if self.include:
+                secondary = [s for s in secondary if s.label in self.include]
+            if self.exclude:
+                secondary = [s for s in secondary if s.label not in self.exclude]
+            detections = merge_detections(
+                primary, secondary, mode=MergeMode(self.merge_mode)
+            )
+        else:
+            detections = primary
         decisions = [
             DetectionRecord(
                 detection=d,

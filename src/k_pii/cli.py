@@ -100,6 +100,23 @@ def _build_parser() -> argparse.ArgumentParser:
         "--audit-log",
         help="Append audit log to this JSONL file.",
     )
+    # OpenAI Privacy Filter 통합 (옵션)
+    p.add_argument(
+        "--with-privacy-filter",
+        action="store_true",
+        help="Combine k-pii with OpenAI Privacy Filter (ML, requires [ml] extras).",
+    )
+    p.add_argument(
+        "--privacy-filter-device",
+        default="cpu",
+        help="Device for Privacy Filter (cpu/cuda/mps). Default: cpu.",
+    )
+    p.add_argument(
+        "--merge-mode",
+        choices=["union", "intersection", "cross_validation", "enrich_primary"],
+        default="union",
+        help="How to combine k-pii with secondary detector (default: union).",
+    )
     # 추가 입력 인자
     p.add_argument(
         "extra_inputs", nargs="*",
@@ -220,12 +237,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         if vault is not None:
             vault.attach_audit(audit)
 
+    secondary = None
+    if args.with_privacy_filter:
+        from k_pii.integrations import get_privacy_filter_adapter
+        secondary = get_privacy_filter_adapter(device=args.privacy_filter_device)
+
     anon = Anonymizer(
         mode=ProcessingMode(args.mode),
         strategy=args.strategy,
         vault=vault,
         include=_split_csv(args.include),
         exclude=_split_csv(args.exclude),
+        secondary_detector=secondary,
+        merge_mode=args.merge_mode,
     )
     if audit and anon.vault is not None:
         anon.vault.attach_audit(audit)

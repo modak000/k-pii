@@ -2,10 +2,10 @@
 
 한국 공공 부문 문서를 위한 규칙 기반 개인정보(PII) 비식별 라이브러리.
 
-> **상태:** Phase 1~10 완료 — "베이스라인" → **"솔루션"** 수준.
-> 25 PII + 6 처리 전략 + HWP/PDF/표 입력 + Vault 암호화 + 감사 로그 + 배치 + 검토 큐 + HTML 리포트 + 한자/로마자.
-> 합성 코퍼스 480문서 micro F1 = 1.000 (실데이터 검증은 별도 트랙).
-> 코어 deps 0개. 입력·보안 기능은 ``[file]`` / ``[security]`` extras 로 분리.
+> **상태:** Phase 1~11 완료 — **솔루션 + 외부 ML 옵셔널 통합**.
+> 25 PII + 6 처리 전략 + HWP/PDF/표 입력 + Vault 암호화 + 감사 로그 + 배치 + 검토 큐 + HTML 리포트 + 한자/로마자 + **OpenAI Privacy Filter 어댑터**.
+> 합성 코퍼스 480문서 micro F1 = 1.000 / KLUE-NER Korean-only F1 = 0.331.
+> 코어 deps 0개. 입력·보안·ML 기능은 ``[file]`` / ``[security]`` / ``[ml]`` extras 로 분리.
 >
 > **AI 에이전트가 처음 이 레포에 합류한다면:** [CLAUDE.md](CLAUDE.md) 먼저 읽어주세요. 미션·설계 원칙·결정 기록·다음에 할 일이 모두 들어있습니다.
 
@@ -94,6 +94,24 @@
 - `eval/metrics.py` — Precision/Recall/F1 (partial/strict 매칭)
 - `eval/benchmark.py` — `python -m k_pii.eval.benchmark -n 60` 으로 즉시 평가
 - `docs/{legal_mapping,risk_levels,coverage}.md` — 법조항·위험도·커버리지 문서
+
+### Phase 11 — 외부 ML 모델 연계 ✅ (옵셔널)
+
+**OpenAI Privacy Filter** (Apache-2.0, 2026.4, 1.5B params) 와의 hybrid 통합:
+- `src/k_pii/integrations/` — SecondaryDetector 프로토콜 + 어댑터들
+- `merge_detections()` — 4가지 모드 (union/intersection/cross_validation/enrich_primary)
+- `Anonymizer(secondary_detector=...)` — k-pii 룰 + ML 자연어 보강
+- *코어 deps 0 유지* — ML 은 `[ml]` extras 로만 설치
+- 가이드: [docs/integration_openai_privacy_filter.md](docs/integration_openai_privacy_filter.md)
+
+```python
+from k_pii import Anonymizer, get_privacy_filter_adapter
+
+pf = get_privacy_filter_adapter(device="cpu")  # 또는 cuda/mps
+anon = Anonymizer(secondary_detector=pf, merge_mode="union")
+result = anon.process(korean_doc)
+# k-pii (룰·결정적 PII·법적 매핑) + Privacy Filter (ML 자연어) 합산
+```
 
 ### Phase 10 — 솔루션 인프라 ✅
 

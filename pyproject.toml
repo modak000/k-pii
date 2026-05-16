@@ -17,10 +17,13 @@ dev = ["pytest>=7.0", "pytest-cov>=4.0"]
 file = ["olefile>=0.46", "pypdf>=3.0"]
 # 보안 — Vault 암호화 (AES-GCM)
 security = ["cryptography>=41.0"]
+# 외부 ML 모델 통합 (OpenAI Privacy Filter 등) — *optional*, 코어는 ML 없이 동작
+ml = ["transformers>=4.40", "torch>=2.0"]
 # 모든 옵션
 all = [
     "olefile>=0.46", "pypdf>=3.0",
     "cryptography>=41.0",
+    "transformers>=4.40", "torch>=2.0",
 ]
 
 [project.scripts]

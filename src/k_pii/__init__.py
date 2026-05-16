@@ -13,6 +13,13 @@ from k_pii.analytics import (
     classify_attribute, score_combined_risk,
     KAnonymityReport, k_anonymity, evaluate_dataset,
 )
+from k_pii.integrations import (
+    SecondaryDetector,
+    MockSecondaryDetector,
+    MergeMode,
+    merge_detections,
+    get_privacy_filter_adapter,
+)
 from k_pii.anonymizer import Anonymizer, AnonymizationResult, DetectionRecord
 from k_pii.core.modes import Action, ProcessingMode
 from k_pii.core.types import DetectionResult, RiskLevel
@@ -51,5 +58,11 @@ __all__ = [
     "KAnonymityReport",
     "k_anonymity",
     "evaluate_dataset",
+    # integrations
+    "SecondaryDetector",
+    "MockSecondaryDetector",
+    "MergeMode",
+    "merge_detections",
+    "get_privacy_filter_adapter",
     "__version__",
 ]
