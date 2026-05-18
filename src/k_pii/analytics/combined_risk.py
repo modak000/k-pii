@@ -52,7 +52,6 @@ _LABEL_TO_CLASS: dict[str, AttributeClass] = {
     # 민감속성 (보호 대상)
     "MEDICAL_INSURANCE": AttributeClass.SENSITIVE,
     "PRESCRIPTION_ID": AttributeClass.SENSITIVE,
-    "KCD": AttributeClass.SENSITIVE,
     "COURT_CASE": AttributeClass.SENSITIVE,
     # 일반·참조
     "URL": AttributeClass.GENERAL,

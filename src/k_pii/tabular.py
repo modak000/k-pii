@@ -105,10 +105,6 @@ _HEADER_MAP: dict[str, str] = {
     # 토지
     "PNU": "PNU", "필지고유번호": "PNU", "토지고유번호": "PNU",
 
-    # 진단
-    "진단코드": "KCD", "주상병": "KCD", "부상병": "KCD", "상병코드": "KCD",
-    "icd": "KCD", "ICD": "KCD",
-
     # 약품
     "약품코드": "EDI_DRUG", "의약품코드": "EDI_DRUG",
 

@@ -20,7 +20,6 @@ from k_pii.patterns import (
     fax,
     frn,
     ip,
-    kcd,
     medical_insurance,
     passport,
     person,
@@ -55,7 +54,6 @@ DETECTORS = (
     account.detect,
     person.detect,
     # 식의약·법조 도메인 (Phase 9)
-    kcd.detect,
     edi_drug.detect,
     court_case.detect,
     # Domain-specific (Phase 4)

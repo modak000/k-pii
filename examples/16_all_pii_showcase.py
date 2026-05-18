@@ -94,12 +94,6 @@ SAMPLES: list[SampleCase] = [
     SampleCase("PRESCRIPTION_ID", "의료기관기호 8자리",
                "요양기관기호: 12345678", ["PRESCRIPTION_ID"]),
 
-    # === 10. KCD (질병코드) ===
-    SampleCase("KCD", "당뇨 E11.9",
-               "진단코드: E11.9 (당뇨병)", ["KCD"]),
-    SampleCase("KCD", "고혈압 I10",
-               "주상병 I10 발견", ["KCD"]),
-
     # === 11. EDI 약품코드 ===
     SampleCase("EDI_DRUG", "약품코드 9자리",
                "약품코드 123456789 처방", ["EDI_DRUG"]),

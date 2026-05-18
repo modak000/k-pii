@@ -31,7 +31,6 @@ _CATEGORY_COLORS: dict[str, str] = {
     "ACCOUNT": "#e64a19",
     "MEDICAL_INSURANCE": "#ad1457",
     "PRESCRIPTION_ID": "#ad1457",
-    "KCD": "#ad1457",
     "PHONE": "#1976d2",
     "FAX": "#1976d2",
     "EMAIL": "#1565c0",

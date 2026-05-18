@@ -29,7 +29,7 @@ class TestLabelMap:
         assert _PRESIDIO_LABEL_MAP["FRN"] == "KR_FRN"
         assert _PRESIDIO_LABEL_MAP["BUSINESS_REG"] == "KR_BUSINESS_REG"
         assert _PRESIDIO_LABEL_MAP["VEHICLE"] == "KR_VEHICLE_PLATE"
-        assert _PRESIDIO_LABEL_MAP["KCD"] == "KR_KCD"
+        assert _PRESIDIO_LABEL_MAP["EDI_DRUG"] == "KR_EDI_DRUG"
 
     def test_presidio_standard_labels(self):
         from k_pii.integrations.presidio_plugin import _PRESIDIO_LABEL_MAP
