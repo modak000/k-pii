@@ -12,7 +12,7 @@ class TestPhoneMobile:
         assert len(results) == 1
         r = results[0]
         assert r.label == "PHONE"
-        assert r.risk_level == RiskLevel.MEDIUM
+        assert r.risk_level == RiskLevel.HIGH
         assert r.extra["type"] == "mobile"
         assert r.extra["digits_only"] == "01012345678"
 

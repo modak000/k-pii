@@ -75,12 +75,15 @@ def _emit(m: re.Match, phone_type: str, international: bool = False) -> Detectio
     ev = ["pattern:phone", f"type:{phone_type}"]
     if international:
         ev.append("intl:+82")
+    # 위험도 분기 — 휴대전화는 개인 직통 (HIGH), 유선/VoIP 는 가입자 추적
+    # 가능하지만 사업장·대표번호 케이스 다수 (MEDIUM).
+    risk = RiskLevel.HIGH if phone_type == "mobile" else RiskLevel.MEDIUM
     return DetectionResult(
         label=LABEL,
         text=m.group(0),
         start=m.start(),
         end=m.end(),
-        risk_level=RiskLevel.MEDIUM,
+        risk_level=risk,
         confidence=1.0,
         evidence=ev,
         legal_basis=LEGAL_BASIS,

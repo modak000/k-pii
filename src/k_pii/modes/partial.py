@@ -37,12 +37,60 @@ def _mask_rrn(text: str) -> str:
 
 
 def _mask_phone(text: str) -> str:
-    """``010-1234-5678`` → ``010-****-5678`` (앞 3 + 뒤 4 노출)."""
+    """전화번호 마스킹 — 한국 번호 체계 보존.
+
+    Examples:
+        010-1234-5678   → 010-****-5678
+        02-1234-5678    → 02-****-5678  (서울은 2자리 지역번호)
+        02-123-4567     → 02-***-4567
+        031-987-6543    → 031-***-6543
+        +82-10-1234-5678 → +82-10-****-5678
+        +82-2-1234-5678  → +82-2-****-5678
+        1588-1234       → 1588-****
+        0504-1234-5678  → 0504-****-5678 (안심번호)
+    """
     digits = re.sub(r"\D", "", text)
     if len(digits) < 7:
         return MASK * len(text)
-    # Preserve separators
-    sep = "-" if "-" in text else (" " if " " in text else "")
+    has_plus = text.startswith("+")
+    if "-" in text:
+        sep = "-"
+    elif "." in text:
+        sep = "."
+    elif " " in text:
+        sep = " "
+    else:
+        sep = ""
+
+    # +82 국가 코드
+    if has_plus and digits.startswith("82"):
+        rest = digits[2:]
+        if rest.startswith("2"):
+            # 서울: +82-2-XXXX-XXXX (앞자리 2 = 02 의 leading 0 제거)
+            sub = rest[1:]
+            mid = MASK * max(3, len(sub) - 4)
+            return f"+82{sep}2{sep}{mid}{sep}{sub[-4:]}"
+        if len(rest) >= 9:
+            # 모바일 (10/11/16-19) 및 3자리 지역번호 (31~64, 70)
+            area = rest[:2]
+            sub = rest[2:]
+            mid = MASK * max(3, len(sub) - 4)
+            return f"+82{sep}{area}{sep}{mid}{sep}{sub[-4:]}"
+
+    # 050X 안심번호 (12자리: 050X + 4 + 4)
+    if digits.startswith("050") and len(digits) == 12:
+        return f"{digits[:4]}{sep}{MASK*4}{sep}{digits[-4:]}"
+
+    # 서울 02 (2자리 지역번호)
+    if digits.startswith("02") and len(digits) in (9, 10):
+        sub_len = len(digits) - 2
+        return f"02{sep}{MASK*(sub_len-4)}{sep}{digits[-4:]}"
+
+    # 1588/1577/1644 형식 (8자리, 지역번호 없음)
+    if len(digits) == 8 and digits[:2] in {"15", "16", "18"}:
+        return f"{digits[:4]}{sep}{MASK*4}"
+
+    # 모바일 (010-019) 및 3자리 지역번호 (031-064, 070)
     if len(digits) >= 11:
         return f"{digits[:3]}{sep}{MASK*4}{sep}{digits[-4:]}"
     if len(digits) == 10:
