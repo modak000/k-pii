@@ -91,12 +91,31 @@ def _looks_like_anonymized(raw: str) -> bool:
 # - 적 (긍정적·일반적·전반적) — 형용사 접미사
 _NOUN_SUFFIXES_FORBIDDEN: tuple[str, ...] = (
     "들", "성", "력", "감", "률", "적",
+    # 안전 확장 (이름 끝 글자 절대 충돌 없는 것만)
+    "증", "점", "팀", "부", "처", "회", "료", "님", "측", "쪽",
 )
 
 
 def _looks_like_common_noun_suffix(raw: str) -> bool:
     """3자+ 토큰 끝이 일반 명사 접미사면 True (예: 사람들·연기력·매력·기대감)."""
     return len(raw) >= 3 and any(raw.endswith(s) for s in _NOUN_SUFFIXES_FORBIDDEN)
+
+
+# 토큰 마지막 글자가 *명확한 동사 활용 어미* 면 거부.
+# 이름 끝 글자 충돌 회피로 conservative — "지", "사", "세", "아", "어", "야",
+# "라", "고", "해", "도", "더", "든" 등은 이름에 흔하므로 제외.
+_VERB_ENDINGS_FINAL: frozenset[str] = frozenset("다네요까잖면려")
+
+# 토큰 마지막 글자가 *명확한 조사 부착* 형태이면 거부.
+# "도/만/뿐" 등은 이름 끝 글자 충돌 가능 → 제외.
+_PARTICLE_FINAL: frozenset[str] = frozenset("은는이가을를의에로와과")
+
+
+def _ends_with_verb_or_particle(raw: str) -> bool:
+    """토큰 끝이 동사 활용 또는 조사 부착이면 True (PERSON 거부 신호)."""
+    if not raw:
+        return False
+    return raw[-1] in _VERB_ENDINGS_FINAL or raw[-1] in _PARTICLE_FINAL
 
 
 # 한국어 동사 어간 빈출 패턴 — "다" 없이 종결되어 candidate 가 매칭되는 형태
@@ -349,6 +368,10 @@ def _detect_with_dict(
             continue
         # Skip 동사 어간 패턴 (나오·추정되·재미있 등)
         if _looks_like_verb_stem(stem):
+            continue
+        # Skip 토큰 끝이 동사 어미/조사 부착 형태 (KDPII FP 분석)
+        # 단, 2자 토큰은 surname+이름 패턴이 흔하므로 예외 (성씨 확실한 경우에만)
+        if len(stem) >= 3 and _ends_with_verb_or_particle(stem):
             continue
 
         # Embedded title — "강회장이" 같이 토큰 안에 직책이 들어있으면
