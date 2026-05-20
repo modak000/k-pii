@@ -1,8 +1,14 @@
 # KDPII 실데이터 평가 + 정제 보고서
 
 > 본 세션 작업 요약. KDPII 데이터셋을 실데이터 벤치마크로 도입하고
-> 베이스라인 측정 후 카테고리별 정제로 micro F1 0.412 → 0.598 (+0.186).
+> 베이스라인 측정 후 카테고리별 정제로 micro F1 0.412 → 0.650 (+0.238).
 > 합성 코퍼스 F1 1.000 / 테스트 699개 통과 유지.
+
+> **원논문 인용**: Li Fei et al., *"KDPII: A New Korean Dialogic Dataset for
+> the Deidentification of Personally Identifiable Information,"* IEEE Access,
+> 2024. DOI: [10.1109/ACCESS.2024.3461804](https://ieeexplore.ieee.org/document/10681073)
+>
+> 정식 통합 보고서는 [`docs/real_data_benchmark.md`](real_data_benchmark.md).
 
 ---
 

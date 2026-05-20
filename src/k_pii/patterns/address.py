@@ -252,10 +252,14 @@ def detect(text: str) -> Iterator[DetectionResult]:
             kind = "country"
         else:
             continue
-        # 대화체 anchor 필수 — 일반 문어체 "25개 자치구 방문" 같은 텍스트 거부
+        # 대화체 anchor 필수 — 일반 문어체 "25개 자치구 방문" 같은 텍스트 거부.
+        # 단 country (국가명) 은 anchor 없이도 emit (KDPII LCP_COUNTRY 의 86%
+        # 가 anchor 없는 단독 등장: "한국 남자/미국 친구" 등).
         anchor = _has_loose_anchor(text, m.start(), actual_end)
-        if anchor is None:
+        if anchor is None and kind != "country":
             continue
+        if anchor is None:
+            anchor = "country_alone"
         seen.add(span)
         yield DetectionResult(
             label=LABEL,

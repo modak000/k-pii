@@ -38,6 +38,14 @@ from k_pii.detect import detect_all
 
 # KDPII 라벨 → k-pii LABEL 매핑.
 # (PS_NAME / OGG_EDUCATION 같이 KDPII 가 사용하는 정식 라벨 기준)
+#
+# 매핑 안 된 KDPII 라벨 (k-pii 스코프 밖):
+#   PS_NICKNAME (별명)  — 가명 vs PII 모호, 별도 카테고리 미구현
+#   OGG_CLUB / OGG_RELIGION — 소속 단체, 별도 카테고리 미구현
+#   LC_PLACE — 일반 장소 (특정 행정구역 아닌 명사), ADDRESS 와 분리
+#   OG_WORKPLACE / OG_DEPARTMENT — 회사·부서명, 별도 카테고리 미구현
+#   CV_SEX / CV_MILITARY_CAMP / TM_BLOOD_TYPE / QT_GRADE — 미구현
+#   LCP_COUNTRY — 국가명 (우리는 ADDRESS 의 country kind 로 처리)
 KDPII_LABEL_MAP: dict[str, str] = {
     "PS_NAME": "PERSON",
     "QT_AGE": "AGE",
@@ -48,8 +56,10 @@ KDPII_LABEL_MAP: dict[str, str] = {
     "QT_PHONE": "PHONE",
     "QT_MOBILE": "PHONE",
     "TMI_EMAIL": "EMAIL",
+    "TMI_SITE": "URL",  # 웹사이트 = URL
     "QT_RESIDENT_NUMBER": "RRN",
     "LC_ADDRESS": "ADDRESS",
+    "LCP_COUNTRY": "ADDRESS",  # 국가 = ADDRESS (admin_alone country kind)
     "QT_CARD_NUMBER": "CARD",
     "QT_ACCOUNT_NUMBER": "ACCOUNT",
     "QT_PASSPORT_NUMBER": "PASSPORT",
