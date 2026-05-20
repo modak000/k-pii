@@ -222,13 +222,20 @@ def detect(text: str) -> Iterator[DetectionResult]:
     # 4) 단독 행정구역 / 국가명 — anchor 필수 (대화체) + dict 매칭 (LOW risk)
     # 다른 ADDRESS 매치와 인접 (50자 이내) 한 단독 행정구역은 같은 주소의
     # 일부로 보고 emit 거부 (도로명/지번 매칭과 중복 방지)
+    from k_pii.context.particles import strip_trailing_particle
     ADMIN_ALONE_ADJACENCY = 50
     for m in _PATTERN_ADMIN_TOKEN.finditer(text):
-        span = (m.start(), m.end())
+        raw_token = m.group(1)
+        # 조사 떨기 — "서울로/서울에서/서울이" → "서울"
+        token, particle = strip_trailing_particle(raw_token)
+        if len(token) < 2:
+            continue
+        # span 은 stem 부분 (조사 제외)
+        actual_end = m.end() - (len(particle) if particle else 0)
+        span = (m.start(), actual_end)
         if any(span[0] < e + ADMIN_ALONE_ADJACENCY and s - ADMIN_ALONE_ADJACENCY < span[1]
                for s, e in seen):
             continue
-        token = m.group(1)
         kind = None
         # 광역 (정식명·약칭·시 약칭)
         if is_province(token) or token in {"강원도", "충청도", "전라도", "경상도", "제주도",
@@ -246,7 +253,7 @@ def detect(text: str) -> Iterator[DetectionResult]:
         else:
             continue
         # 대화체 anchor 필수 — 일반 문어체 "25개 자치구 방문" 같은 텍스트 거부
-        anchor = _has_loose_anchor(text, m.start(), m.end())
+        anchor = _has_loose_anchor(text, m.start(), actual_end)
         if anchor is None:
             continue
         seen.add(span)
@@ -254,7 +261,7 @@ def detect(text: str) -> Iterator[DetectionResult]:
             label=LABEL,
             text=token,
             start=m.start(),
-            end=m.end(),
+            end=actual_end,
             risk_level=RiskLevel.LOW,
             confidence=0.7,
             evidence=[f"pattern:admin_alone({kind})", f"dict:{kind}",

@@ -36,7 +36,7 @@ LEGAL_BASIS = "개인정보보호법 제2조"
 _EDUCATION_PATTERN = re.compile(
     r"(?<![가-힣A-Za-z])"
     r"(?P<full>[가-힣]{2,15}(?:대학교|대학원대학교|전문대학|대학원|대학)|"
-    r"(?P<abbrev>[가-힣]{2,5}대)|"
+    r"(?P<abbrev>[가-힣]{1,5}대)|"  # 1자 prefix 허용 — "고대/홍대/이대/연대/성대"
     r"(?P<eng>KAIST|POSTECH|UNIST|GIST|DGIST)|"
     r"(?P<kor>카이스트|포스텍|유니스트|지스트|디지스트)|"
     r"(?P<elem>[가-힣]{2,10}초등학교|[가-힣]{1,8}초)|"
@@ -209,7 +209,7 @@ def _position_anchor_before(text: str, start: int, window: int = 12) -> str | No
 _POSITION_HONORIFIC_PATTERN = re.compile(
     r"(?<![가-힣A-Za-z])"
     r"([가-힣]{1,6})님"
-    r"(?![가-힣A-Za-z])"
+    # lookahead 제거 — "부장님께/부장님이/팀장님일" 같은 조사 부착 허용
 )
 
 
