@@ -172,8 +172,13 @@ def score_candidate(
 
     # Deterministic PII adjacent — strong cue: RRN/PHONE next to a Korean
     # 2~4 char surname-prefixed token is almost always a name.
+    # 길이 차등 부스트 (KDPII 과탐 분석 결과):
+    # - 3자+ 풀네임: +0.40 (확정적 PII 옆 풀네임 = 거의 확실한 인명)
+    # - 2자 단명·약명: +0.20 (성+1자 이름은 일반 어휘 충돌 잦음)
     if deterministic_nearby:
-        score += 0.40
+        token_len = cand.end - cand.start
+        boost = 0.40 if token_len >= 3 else 0.20
+        score += boost
         ev.append("pos:deterministic_pii_nearby")
 
     # Agency mention in same sentence

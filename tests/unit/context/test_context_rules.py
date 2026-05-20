@@ -26,7 +26,7 @@ class TestPositiveSignals:
     def test_deterministic_pii_nearby(self):
         s = _score("홍길동 880101-1234568", "홍길동", deterministic_nearby=True)
         assert any("deterministic_pii" in e for e in s.evidence)
-        assert s.value >= 0.45  # 0.15 (surname) + 0.30 (det) + bonuses
+        assert s.value >= 0.45  # 0.15 (surname) + 0.40 (3자 det) + bonuses
 
 
 class TestNegativeSignals:
