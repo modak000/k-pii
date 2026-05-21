@@ -207,6 +207,51 @@ PERSON · EMAIL · PHONE · ADDRESS · DT_BIRTH · URL · ACCOUNT 한정:
 - **EMAIL/PHONE precision** 변동 적음 — 둘 다 이미 0.99+
 - **한국 특화 라벨** (RRN 등) k-pii 단독과 동일 — PF 가 그 라벨을 출력 못함
 
+### 추가 도메인 측정 (2026-05-21)
+
+**KLUE-NER PERSON (신문기사, 한글 풀네임만 평가):**
+
+| 모델 | 문서 | TP | FP | FN | P | R | F1 |
+|------|----:|---:|---:|---:|--:|--:|--:|
+| k-pii | 5,000 | 980 | 1,790 | 932 | 0.354 | 0.513 | **0.419** |
+| Privacy Filter (1,000 sample) | 1,000 | 24 | 9 | 389 | 0.727 | **0.058** | **0.108** |
+
+→ openai/PF 가 한국어 신문기사 풀네임의 **94% 를 미탐**. precision 은 0.727 로 높지만, 한국어 학습 분포가 약해 *catch 자체* 가 적음. k-pii 의 룰 기반 검출이 이런 도메인에 강함.
+
+**PII 주입 코퍼스 (실데이터 + 합성 PII):**
+
+기존 합성 (13 템플릿) 의 과적합 가능성을 우회하려고 새로 만든 코퍼스. AI Hub 569 행정문서 본문 200 문단 (양 모델 모두 학습 노출 없음) 에 합성 PII 를 10가지 anchor 패턴으로 주입. Gold 1,043 spans.
+
+| 카테고리 | gold | k-pii F1 | PF F1 |
+|---------|----:|---------:|------:|
+| ACCOUNT | 23 | 1.000 | 0.189 (PF FP 198) |
+| ADDRESS | 72 | 0.980 | 0.354 (PF FP 202) |
+| BUSINESS_REG | 34 | 1.000 | 0.000 (PF 라벨 부재) |
+| DRIVER_LICENSE | 8 | 1.000 | 0.000 |
+| EMAIL | 39 | 1.000 | 0.987 |
+| PASSPORT | 12 | 1.000 | 0.000 |
+| PERSON | 453 | 0.795 | **0.600** |
+| PHONE | 306 | 1.000 | 0.862 |
+| RRN | 72 | 1.000 | 0.000 |
+| VEHICLE | 24 | 1.000 | 0.000 |
+| **micro** | **1,043** | **0.901** | **0.507** |
+
+→ **anchor 가 강한 도메인 (필드 라벨·서명·괄호) 에서는 PF 의 한국어 PERSON 검출이 F1 0.600** — KDPII (0.147) / KLUE-NER (0.108) 보다 훨씬 향상. 즉 PF 도 "한국어가 약하다" 가 아니라 "anchor 없는 자연어 인명에 약하다".
+
+PF 의 두드러진 약점:
+- `account_number` catch-all: 행정문서 숫자열을 잘못 ACCOUNT 로 → 198 FP
+- `private_date` 과탐: 한국식 날짜 표현 → 250 FP (k-pii DT_BIRTH 4 FP)
+- 한국 특화 라벨 부재: BUSINESS_REG/DRIVER_LICENSE/PASSPORT/RRN/VEHICLE 153 gold 전체 자동 FN
+
+재현 방법:
+```bash
+# 1. inject 코퍼스 생성
+python data/inject_pii_corpus.py -n 200 --seed 0
+
+# 2. 두 검출기 비교
+python data/eval_injected_corpus.py data/corpus/injected_pii_corpus.jsonl
+```
+
 ### 솔직한 결론
 
 본 평가는 **"k-pii vs Privacy Filter 누가 이기느냐"** 의 답이 아니다.
