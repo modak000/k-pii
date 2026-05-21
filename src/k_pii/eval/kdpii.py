@@ -170,15 +170,32 @@ def _matched_overlap(pred: set[str], gold: set[str]) -> tuple[set[str], set[str]
 def evaluate_kdpii(
     docs: Iterable[KdpiiDocument],
     detector: Callable[[str], Iterable[DetectionResult]] = detect_all,
+    *,
+    person_min_length: int = 1,
 ) -> KdpiiReport:
+    """KDPII 평가.
+
+    ``person_min_length``: PERSON gold form 의 최소 길이.
+    - 1 (기본): 모든 PERSON 평가
+    - 3: 풀네임 (3자+) 만 평가 — 한국어 PII 정의 (제2조: 단독 별명·1-2자 이름은
+      그 자체로 PII 아님) 에 부합. 외자 이름·단성 성씨 제외.
+
+    예측 (prediction) 도 동일한 길이 필터 적용.
+    """
     report = KdpiiReport()
     for doc in docs:
         report.n_documents += 1
         pred_by_label: dict[str, set[str]] = defaultdict(set)
         for r in detector(doc.query):
+            # PERSON 예측도 길이 필터 적용 (gold 기준과 일치)
+            if r.label == "PERSON" and len(r.text) < person_min_length:
+                continue
             pred_by_label[r.label].add(r.text)
         for lab in set(doc.gold) | set(pred_by_label):
             g = doc.gold.get(lab, set())
+            # PERSON gold 도 길이 필터
+            if lab == "PERSON" and person_min_length > 1:
+                g = {gi for gi in g if len(gi) >= person_min_length}
             p = pred_by_label.get(lab, set())
             mp, mg = _matched_overlap(p, g)
             m = report.per_label.setdefault(lab, LabelMetrics(label=lab))
@@ -222,10 +239,17 @@ def main(argv: list[str] | None = None) -> int:
         description="KDPII 코퍼스에서 k-pii 검출 정확도 평가",
     )
     p.add_argument("path", help="KDPII JSONL 파일")
+    p.add_argument("--person-min-length", type=int, default=3,
+                   help="PERSON 최소 길이 (기본 3 — 풀네임만 평가, "
+                        "한국 개인정보보호법 제2조: 단독 1-2자 별명은 "
+                        "그 자체로 PII 아님). 1 로 두면 별명 포함.")
     args = p.parse_args(argv)
     docs = load_kdpii(args.path)
-    report = evaluate_kdpii(docs)
+    report = evaluate_kdpii(docs, person_min_length=args.person_min_length)
     print(format_kdpii_report(report))
+    if args.person_min_length >= 3:
+        print(f"\n※ PERSON 평가는 풀네임 ({args.person_min_length}자+) 만 — "
+              "단독 1-2자 별명 제외 (제2조: 그 자체로 식별 불가)")
     return 0
 
 

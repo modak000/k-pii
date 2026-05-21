@@ -173,7 +173,7 @@ def evaluate_person(
     def _is_valid_korean_fullname(text: str) -> bool:
         if not fullname_only:
             return True
-        if len(text) < 2 or len(text) > 5:
+        if len(text) < 3 or len(text) > 5:  # 풀네임 = 3-5자 (단성/외자 제외)
             return False
         if not all("가" <= ch <= "힣" for ch in text):
             return False
