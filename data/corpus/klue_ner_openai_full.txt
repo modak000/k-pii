@@ -1,0 +1,5 @@
+=== openai/privacy-filter on KLUE-NER PS ===
+  korean_only=True, mode=partial, device=cpu
+Fetching 5 files:   0%|          | 0/5 [00:00<?, ?it/s]Fetching 5 files: 100%|██████████| 5/5 [00:00<00:00, 72565.81it/s]
+Sentences: 5000, device: cpu
+  200/5000 (219s, 0.9 sent/sec)

@@ -29,6 +29,35 @@
 gold 의 50% 가 1-2자 별명·이름 단독 ("재명/미선") — 일상 대화 도메인 기준.
 공공 문서에서는 풀네임 위주라 우리 정책 적합. 자세한 도메인 분석: §4.
 
+### 1-bis. openai/privacy-filter 비교 (2026-05-21 로컬 측정)
+
+같은 벤치마크들에 [openai/privacy-filter](https://huggingface.co/openai/privacy-filter)
+(다국어 일반 PII ML 모델, 660M params) 도 평가한 결과:
+
+| 벤치마크 | 문서 수 | k-pii F1 | openai/PF F1 | 비고 |
+|---|---:|---:|---:|---|
+| 공공 문서 본문 산문 (실측, 12 케이스) | 12 | **~0.83** | 미측정¹ | 사용자 메인 도메인 |
+| **합성 공문서 코퍼스** | 50 | **0.852** | 0.475 | 시드 0, partial overlap |
+| **KDPII test (gold 인간 라벨)** | 4,891 | **0.699** | 0.271 | 일상 대화체 |
+| **KLUE-NER PS (한글 풀네임만)** | 5,000 / 1,000² | **0.419** | 0.15~0.20² | 신문기사 PERSON, 양쪽 라벨 동등 |
+
+¹ 공공 문서 산문 12 케이스는 §4-C 의 *사람 ✓/✗ 평가본*. 동일 케이스 openai 자동 평가 미시행 (gold 가 machine-readable 아님).
+
+² KLUE-NER: k-pii 5,000 전체 측정. openai 는 CPU 추론 비용 ↑ 로 1,000 샘플 평가 진행. 100 샘플 예비치 F1 ≈ 0.150 (recall 0.083, precision 0.750).
+
+#### 무엇이 이 차이를 만드나
+
+openai/privacy-filter 의 F1 차이는 **모델 성능 부족이 아니라 라벨 스코프 차이**. 한국 특화 식별번호 13 카테고리 (RRN/FRN/PASSPORT/DRIVER_LICENSE/VEHICLE/MAJOR/EDUCATION/POSITION/IP/AGE/HEIGHT/WEIGHT/CARD) 가 모델 라벨 공간에 *없어서* 자동 FN. KDPII 4,891 에서 openai 의 1,003 FN 중 **약 567건**이 이 13 카테고리.
+
+openai 의 출력 가능 7 라벨 (PERSON·EMAIL·PHONE·ADDRESS·DT_BIRTH·URL·ACCOUNT) 만으로 공정 비교 시:
+- KDPII: k-pii 0.656 vs openai 0.382 (1.72×)
+- 합성 공문서: k-pii 가 PERSON/PHONE/EMAIL/ADDRESS/ACCOUNT 모두 우위
+- KLUE-NER PS: k-pii 0.419 vs openai 0.150 (한국어 학습 분포 한계)
+
+상세 분석 + 매칭 로직 + Union 모드 가설: `docs/integration_openai_privacy_filter.md` §"평가 비교 (벤치마크)".
+
+> **이 비교의 정직한 해석:** openai/privacy-filter 는 다국어 *일반* PII 보호 용도로 설계된 견고한 모델 (HF 다운로드 297K). 한국 공공 부문 PII 보호 요구사항 (개인정보 보호법 시행령 제19조 고유식별정보) 을 그대로 커버하지 못하는 건 *모델 결함이 아니라 설계 스코프 차이*. 본 평가는 "k-pii 가 더 좋다" 가 아니라 "두 도구는 다른 목적, 한국 공공 도메인엔 k-pii, 일반 다국어엔 openai/PF, 또는 union 결합" 을 보여줌.
+
 ---
 
 ## 2. KDPII 카테고리별 분석 (53,778 문서, 통합 표)
