@@ -5,6 +5,77 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-21
+
+Phase 9 (실데이터 평가 + 룰 정제) 완료. KDPII 53,778 문서 실데이터
+벤치마크 도입. PERSON 풀네임 (3자+) 만 평가 기준 (개인정보보호법 제2조).
+
+### Added — 평가 인프라
+
+- `eval/kdpii.py` — KDPII 평가 모듈 (`--person-min-length=3` 기본)
+- `eval/fp_collector.py` — 자동 과탐 어휘 수집 도구
+  (비식별 텍스트 → PERSON 과탐 → common_words 후보 추출)
+- 합성 코퍼스 8 → **13 템플릿** 확장:
+  - press_release / audit_report / contract / hr_appointment / admin_disposition
+
+### Added — 사전 확장
+
+- `dictionaries/districts.py`:
+  - 동 사전 +85개 (COMMON_DONGS)
+  - 국가명 사전 70+ (COUNTRIES)
+  - 시 약칭 60+ (EXTRA_CITY_ABBREV)
+- `dictionaries/universities.py`: 약칭 +30 (3자 정식형 누락 보강)
+- `dictionaries/titles.py`: 권사/집사/매니저/학생회장/길드장 등 30+
+- `dictionaries/majors.py`: 학과 +70 (실용음악과/예술학과 등)
+- `dictionaries/common_words.py`: KDPII 자동 수집 어휘 ~200 + 공문서 어휘 ~30
+- `patterns/person.py`: `_COMMON_KOREAN_ENDINGS` 한국어 어말 16종 사전
+
+### Added — 검출 정확도
+
+- AGE: 한글 음역 일의자리 단독 ("한 살/세 살"), 환갑/팔순 등 명사,
+  N개월 영유아 anchor, "30대" 연령대 패턴
+- ADDRESS: 국적 접미사 자동 strip ("한국인" → "한국")
+- DT_BIRTH: 30+ 비-생일 키워드 거부 ("선고일자/시행일자/배포일자" 등)
+- PHONE: 대표번호 (15xx-18xx) 8자리 패턴 추가
+- EDUCATION: 정규식 outer named-group 분리 (X대/X고/X중/X초 약칭 매칭)
+
+### Added — IO + 메타데이터
+
+- `io_/docx.py`: DOCX 메타데이터 (creator/lastModifiedBy/title) 추출
+- `io_/hwpx.py`: HWPX 메타데이터 추출
+
+### Changed — 평가 정책 (Breaking)
+
+- KDPII 평가 기본값: PERSON 풀네임만 (3자+) — 개인정보보호법 제2조
+  정의상 단독 1-2자 별명은 PII 아님. `--person-min-length=1` 으로 이전
+  동작 복원 가능.
+- KLUE-NER 평가도 풀네임만 (이전 2자+ → 3자+)
+- 합성 코퍼스 위치 명확화 — "회귀 감지 sanity check" 으로 격하 (실제
+  정확도는 KDPII / 공공 문서 본문 산문 측정)
+
+### Documentation
+
+- `docs/EVALUATION_REPORT.md` — 통합 평가 보고서 (한국어 명명 정탐/오탐/미탐)
+- `docs/kdpii_evaluation_report.md` — KDPII 결과 보고서
+- `docs/domain_fit_report.md` — 도메인 적합도 분석
+- `docs/kdpii_visual_compare.html` — KDPII 100 문서 시각 비교
+- CLAUDE.md Decision Log D-011~D-027 추가
+
+### 정확도 (KDPII 53,778 문서, PERSON 풀네임만)
+
+| Tier | 카테고리 | F1 |
+|---|---|---:|
+| S | EMAIL/VEHICLE/FRN/RRN/IP/PHONE/URL | 0.99+ |
+| A | WEIGHT/HEIGHT/DRIVER_LICENSE/ACCOUNT/AGE | 0.82~0.92 |
+| B | PASSPORT/MAJOR/DT_BIRTH/EDUCATION/POSITION | 0.55~0.80 |
+| C | ADDRESS | 0.52 |
+| D | PERSON/CARD | 0.14~0.19 |
+| **전체** | | **0.699** |
+
+- 공공 문서 본문 산문 (메인 도메인): F1 ≈ 0.83
+- 합성 13 템플릿: F1 = 0.85 (회귀 감지 sanity)
+- KLUE-NER PERSON 풀네임: F1 = 0.376
+
 ## [1.0.0] - 2026-05-15
 
 첫 정식 릴리스. 한국 공공 부문 PII 검출·가명화 도구로 production-ready 수준
