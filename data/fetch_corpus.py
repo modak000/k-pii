@@ -3,13 +3,16 @@
 Phase 1 (Wikipedia bootstrap, commit e02f135):
     11 admin/law articles from ko.wikipedia.org/w/api.php — ~25K chars.
 
-Phase 2 (this revision):
+Phase 2 (commit de5ddf2):
     Real public-sector text from sources reachable from a Korean residential
-    network (cloud session was blocked by Anthropic's allowlist on Korean
-    .go.kr domains; the local Windows session is not):
-      - korea.kr 정책브리핑   — 부처 보도자료 본문 (HTML 본문 추출)
-      - casenote.kr           — 판결문 검색 결과 (HTML 본문 추출)
-      - ko.wikipedia.org      — 기존 추상 토픽 (변동 없음)
+    network — korea.kr 정책브리핑 20편 + Wikipedia.
+
+Phase 3 (manually placed files):
+    The richest source — AI Hub 공공 민원 상담 (71845) / 행정문서 (569) — is
+    behind login + 활용승인. If a user supplies the downloaded/extracted text
+    files under data/corpus/aihub_*/ they will be picked up by
+    `concat_aihub_text()` below and folded into the combined corpus.
+    See CLAUDE.md §5 D-027 for the access path.
 
 Not part of the library. Output goes to data/corpus/ and feeds
 ``python -m k_pii.eval.fp_collector``.
@@ -218,6 +221,34 @@ def crawl_law_go_kr() -> list[tuple[str, str]]:
 # Orchestrator
 # ----------------------------------------------------------------------------
 
+def concat_aihub_text() -> list[tuple[str, str]]:
+    """Pick up user-supplied AI Hub text files placed under data/corpus/aihub_*/.
+
+    Expected layout (user dumps the unzipped/converted training text here):
+        data/corpus/aihub_71845/*.txt      # 공공 민원 상담
+        data/corpus/aihub_569/*.txt        # 행정문서 기계독해
+        data/corpus/aihub_*/   (any subset)
+
+    Each .txt is read raw; the directory name becomes the source label.
+    """
+    base = Path(__file__).parent / "corpus"
+    out: list[tuple[str, str]] = []
+    if not base.exists():
+        return out
+    for sub in sorted(base.glob("aihub_*")):
+        if not sub.is_dir():
+            continue
+        for txt in sorted(sub.glob("**/*.txt")):
+            try:
+                content = txt.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                content = txt.read_text(encoding="cp949", errors="replace")
+            if content.strip():
+                out.append((f"{sub.name}:{txt.name}", content))
+                print(f"  {sub.name}/{txt.name}: {len(content):,} chars")
+    return out
+
+
 def main() -> None:
     out_dir = Path(__file__).parent / "corpus"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -227,6 +258,7 @@ def main() -> None:
         ("korea_kr.txt", lambda: crawl_korea_kr(max_articles=25)),
         ("casenote.txt", lambda: crawl_casenote(max_cases=15)),
         ("law_go_kr.txt", crawl_law_go_kr),
+        ("aihub.txt", concat_aihub_text),
     ]
 
     combined_parts: list[str] = []
