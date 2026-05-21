@@ -132,22 +132,60 @@ class KdpiiReport:
         return 2 * p * r / (p + r) if p + r else 0.0
 
 
+def _from_jsonl_record(d: dict) -> KdpiiDocument:
+    """Original JSONL schema (cloud session input): {query, answer:[{label,form}]}."""
+    doc = KdpiiDocument(query=d["query"])
+    for a in d.get("answer", []):
+        mapped = KDPII_LABEL_MAP.get(a["label"])
+        if mapped is None:
+            continue
+        doc.gold.setdefault(mapped, set()).add(a["form"])
+    return doc
+
+
+def _from_zenodo_record(d: dict) -> KdpiiDocument:
+    """Zenodo schema (record 10968609): {sentence, PII_set:[{label,form,begin,end}], ...}."""
+    doc = KdpiiDocument(query=d.get("sentence", ""))
+    for a in d.get("PII_set", []):
+        label = a.get("label")
+        form = a.get("form")
+        if not label or not form:
+            continue
+        mapped = KDPII_LABEL_MAP.get(label)
+        if mapped is None:
+            continue
+        doc.gold.setdefault(mapped, set()).add(form)
+    return doc
+
+
 def load_kdpii(path: str | Path) -> list[KdpiiDocument]:
-    """JSONL 파일 → KdpiiDocument 리스트. 매핑 안 된 라벨은 무시."""
+    """KDPII 로더 — 입력 형식 자동 감지.
+
+    - Zenodo JSON (record 10968609): top-level array, 각 record는 ``sentence``/
+      ``PII_set`` 필드. ``train.json`` / ``valid.json`` / ``test.json`` 모두 이 형식.
+    - 원래 JSONL: 라인당 ``{query, answer}`` (cloud session 처리본).
+
+    매핑 안 된 KDPII 라벨은 무시 (``KDPII_LABEL_MAP`` 참조).
+    """
+    path = Path(path)
+    text = path.read_text(encoding="utf-8")
+    stripped = text.lstrip()
     docs: list[KdpiiDocument] = []
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
+    if stripped.startswith("["):
+        # Zenodo JSON array
+        for d in json.loads(text):
+            docs.append(_from_zenodo_record(d))
+    else:
+        # JSONL
+        for line in text.splitlines():
             line = line.strip()
             if not line:
                 continue
             d = json.loads(line)
-            doc = KdpiiDocument(query=d["query"])
-            for a in d.get("answer", []):
-                mapped = KDPII_LABEL_MAP.get(a["label"])
-                if mapped is None:
-                    continue
-                doc.gold.setdefault(mapped, set()).add(a["form"])
-            docs.append(doc)
+            if "sentence" in d and "PII_set" in d:
+                docs.append(_from_zenodo_record(d))
+            else:
+                docs.append(_from_jsonl_record(d))
     return docs
 
 
