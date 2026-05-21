@@ -37,8 +37,16 @@ _PHONE_LANDLINE = [
 
 _PHONE_REPRESENTATIVE = ["1588-1234", "1644-5566", "1577-0000", "1899-7777"]
 
-# 사업자번호: 체크섬 valid
-_BIZREG_SAMPLES = ["123-45-67890", "1234567893", "211-87-22653"]
+# 사업자번호: 국세청 가중합 체크섬 valid (compute_check_digit 로 검증됨)
+_BIZREG_SAMPLES = [
+    "120-81-47521",  # 한전 (실제 공개 사업자번호)
+    "211-87-22658",
+    "123-45-67891",
+    "201-23-45671",
+    "401-23-45679",
+    "104-81-23454",
+    "318-67-38211",
+]
 
 _EMAIL_SAMPLES = [
     "kim.minsu@example.go.kr", "yhpark@gov.kr",
@@ -62,19 +70,125 @@ _ADDR_JIBUN = [
     "서울특별시 마포구 합정동 372-1",
 ]
 
-# 이름 풀 (성씨 + 이름 1~2글자) — 공공기관과의 우연 충돌을 피하려고 흔한 조합 사용
+# 이름 풀 — 합성 다양성 향상을 위해 확장 (한국 인명 통계 분포 반영)
+# 출처: 통계청 「인구주택총조사」 빈출 성씨 + 한국교육개발원 이름 빈도 자료
 _NAMES = [
-    "홍길동", "김민수", "박영수", "이수정", "최지훈", "정혜진",
-    "강도현", "남궁민수", "황보경", "송지효",
-    "윤서연", "임도윤", "조하늘", "장미경", "한지원",
+    # 김씨 (한국 최다 21%)
+    "김민수", "김지원", "김도윤", "김서연", "김민지", "김하늘", "김예진",
+    "김재현", "김수민", "김지호", "김예원", "김태훈", "김민준", "김유진",
+    # 이씨
+    "이수정", "이서준", "이도현", "이지민", "이은영", "이재훈", "이서영",
+    "이지호", "이민호", "이수빈", "이채원", "이정훈", "이가은",
+    # 박씨
+    "박영수", "박지훈", "박서연", "박민지", "박재훈", "박수현", "박지원",
+    "박서영", "박민호", "박도현",
+    # 최씨
+    "최지훈", "최민서", "최영진", "최수아", "최예린", "최도윤",
+    # 정씨
+    "정혜진", "정민기", "정유진", "정재훈", "정현우",
+    # 강씨
+    "강도현", "강민서", "강예준",
+    # 윤·조·장·임·한
+    "윤서연", "윤지호", "윤민기",
+    "조하늘", "조민서", "조지훈",
+    "장미경", "장지호", "장유진",
+    "임도윤", "임수민", "임지원",
+    "한지원", "한도현", "한서영",
+    # 송·황·오·서·신
+    "송지효", "송민기", "송서영",
+    "황보경", "황지원",
+    "오민서", "오재훈",
+    "서예진", "서민호",
+    "신도윤", "신지원",
+    # 복성
+    "남궁민수", "남궁지원",
+    "황보경", "황보영진",
+    "선우민기", "선우지호",
+    # 양·노·하·문·구
+    "양수민", "양도윤",
+    "노예린", "노재훈",
+    "하지원", "하예원",
+    "문지호", "문수민",
+    "구민서", "구하늘",
+    # 홍·전·고·차
+    "홍길동", "홍지원",
+    "전민기", "전서영",
+    "고수민", "고도현",
+    "차예진", "차지호",
 ]
 
-_TITLES_GOV_POOL = ["과장", "사무관", "주무관", "서기관", "국장", "팀장"]
-_TITLES_POLICE_POOL = ["경감", "경위", "경정", "총경"]
-_TITLES_FIRE_POOL = ["소방위", "소방경", "소방령"]
-_TITLES_MILITARY_POOL = ["대위", "소령", "대령"]
-_AGENCIES_POOL = ["기획재정부", "행정안전부", "보건복지부", "법무부", "교육부"]
-_AGENCY_ABBREV_POOL = ["기재부", "행안부", "복지부", "국토부", "과기정통부"]
+_TITLES_GOV_POOL = ["과장", "사무관", "주무관", "서기관", "국장", "팀장",
+                     "주사", "주사보", "주임", "계장", "부이사관", "이사관"]
+_TITLES_POLICE_POOL = ["경감", "경위", "경정", "총경", "경무관", "치안감", "경사", "경장"]
+_TITLES_FIRE_POOL = ["소방위", "소방경", "소방령", "소방정", "소방준감", "소방감", "소방장"]
+_TITLES_MILITARY_POOL = ["대위", "소령", "중령", "대령", "준장", "소장", "중장",
+                          "상사", "원사", "중사", "하사"]
+_AGENCIES_POOL = [
+    "기획재정부", "행정안전부", "보건복지부", "법무부", "교육부",
+    "통일부", "외교부", "국방부", "문화체육관광부", "농림축산식품부",
+    "환경부", "고용노동부", "여성가족부", "국토교통부", "해양수산부",
+    "중소벤처기업부", "산업통상자원부", "과학기술정보통신부",
+    "국가보훈부", "국세청", "관세청", "조달청", "통계청",
+    "검찰청", "병무청", "방위사업청", "경찰청", "소방청",
+    "문화재청", "농촌진흥청", "산림청", "특허청", "기상청",
+    "행정중심복합도시건설청", "새만금개발청",
+]
+_AGENCY_ABBREV_POOL = ["기재부", "행안부", "복지부", "국토부", "과기정통부",
+                        "고용부", "산업부", "환경부", "교육부",
+                        "통일부", "외교부", "국방부", "여가부",
+                        "해수부", "농식품부", "문체부",
+                        "보훈부", "벤처부"]
+
+# 공공기관·공기업 (KOR 공공기관 운영법 기준 일부)
+_PUBLIC_CORP_POOL = [
+    "한국전력공사", "한국가스공사", "한국수자원공사", "한국도로공사",
+    "한국철도공사", "코레일", "한국공항공사", "인천국제공항공사",
+    "한국토지주택공사", "LH", "주택도시보증공사", "HUG",
+    "국민건강보험공단", "국민연금공단", "건강보험심사평가원",
+    "한국산업단지공단", "한국관광공사", "한국방송광고진흥공사",
+    "한국정책방송원", "KTV", "한국방송공사", "KBS",
+    "한국교육방송공사", "EBS",
+]
+
+# 회사명 (가공 — 실재 회사명 충돌 회피 위해 합성)
+_COMPANY_POOL = [
+    "ABC주식회사", "한빛상사", "대한물류", "고려테크",
+    "한솔ICT", "한미산업", "동서무역", "신한금융지주",
+    "한국씨엔에스", "한미사이언스", "BNK캐피탈",
+    "코웨이", "현대정보기술", "POSCO홀딩스", "삼성리서치",
+    "LG에너지솔루션", "SK엔무브", "한화테크원",
+    "한국오라클", "한국마이크로소프트", "한국HP",
+    "(주)미래에셋", "(주)한맥산업", "(주)대성그룹",
+    "신세계푸드", "롯데정보통신", "CJ대한통운",
+]
+
+# 부서명 (정부 + 민간 공통)
+_DEPT_POOL = [
+    # 정부 부처 일반
+    "총무과", "운영지원과", "인사과", "감사담당관실", "기획조정실",
+    "정책기획과", "혁신행정담당관", "재정담당관", "비상안전기획관",
+    # 사업 부서
+    "민원과", "민원봉사과", "안전관리과", "건축과", "주택과",
+    "환경위생과", "위생과", "공원녹지과", "교통행정과",
+    "복지정책과", "복지서비스과", "노인복지과", "청소년과",
+    "문화예술과", "관광진흥과", "체육진흥과",
+    "보건정책과", "위생관리과", "감염병관리과",
+    # 민간 부서
+    "인사팀", "재무팀", "마케팅팀", "영업팀", "기획팀",
+    "전략기획팀", "법무팀", "감사팀", "IT지원팀",
+    "구매팀", "물류팀", "고객만족팀", "홍보팀",
+    "연구개발팀", "R&D팀", "신사업팀", "투자전략팀",
+]
+_SCHOOL_POOL = [
+    "서울대학교", "연세대학교", "고려대학교", "성균관대학교",
+    "한양대학교", "서강대학교", "중앙대학교", "경희대학교",
+    "이화여자대학교", "한국외국어대학교", "건국대학교",
+    "동국대학교", "홍익대학교", "숙명여자대학교",
+    "부산대학교", "경북대학교", "전남대학교", "충남대학교",
+    "한국과학기술원", "포항공과대학교", "광주과학기술원",
+    "울산과학기술원", "대구경북과학기술원",
+    "한국교통대학교", "강원대학교", "충북대학교",
+]
 
 # 노이즈 — PII 가 아닌 본문 문장 (실제 공문서에서 자주 등장)
 _BOILERPLATE_LAW_CITATIONS = [
@@ -638,6 +752,268 @@ def _tax_notice(rnd: random.Random) -> GoldDocument:
     })
 
 
+def _press_release(rnd: random.Random) -> GoldDocument:
+    """정부 보도자료 — 정책 발표 / 임명 / 행사 안내."""
+    agency = rnd.choice(_AGENCIES_POOL)
+    spokesman = rnd.choice(_NAMES)
+    spokesman_title = rnd.choice(["대변인", "공보관", "정책기획관", "홍보담당관"])
+    minister = rnd.choice([n for n in _NAMES if n != spokesman])
+    rep_phone = rnd.choice(_PHONE_REPRESENTATIVE)
+    contact_phone = rnd.choice(_PHONE_LANDLINE)
+    email = rnd.choice(_EMAIL_SAMPLES)
+    abbrev = rnd.choice(_AGENCY_ABBREV_POOL)
+    docnum = f"{abbrev}-홍보과-2026-{rnd.randint(10000, 99999)}"
+
+    parts = [
+        ("[보도자료]\n\n", None),
+        ("문서번호: ", None),
+        (docnum, "DOC_ID"),
+        ("\n배포일자: 2026년 5월 21일\n", None),
+        (f"배포처: {agency} 홍보과\n\n", None),
+        ("□ 제목: 신규 정책 추진 발표\n\n", None),
+        ("□ 발표 내용\n", None),
+        (f"  {agency} ", None),
+        (minister, "PERSON"),
+        (" 장관은 금일 정례 브리핑에서 ", None),
+        ("다음과 같이 신규 정책 추진 계획을 발표하였습니다.\n", None),
+        ("  1) 본 정책은 관련 법령 개정과 함께 진행되며, ", None),
+        ("국민 의견 수렴을 위한 공청회를 6월 중 개최할 예정.\n", None),
+        ("  2) 추진 일정에 따라 단계적 시행 예정.\n\n", None),
+        ("□ 향후 일정\n", None),
+        ("  - 6월: 공청회 (서울, 대전, 부산 3회)\n", None),
+        ("  - 7월: 의견 수렴 분석\n", None),
+        ("  - 8월: 시행령 개정안 입법 예고\n\n", None),
+        ("□ 문의처\n", None),
+        ("  - 담당자: ", None),
+        (spokesman, "PERSON"),
+        (f" {spokesman_title}\n", None),
+        ("  - 직통전화: ", None),
+        (contact_phone, "PHONE"),
+        ("\n  - 대표번호: ", None),
+        (rep_phone, "PHONE"),
+        ("\n  - 이메일: ", None),
+        (email, "EMAIL"),
+        ("\n\n끝.\n", None),
+    ]
+    return _assemble(parts, template="press_release", pii_labels={
+        "PERSON", "PHONE", "EMAIL", "DOC_ID",
+    })
+
+
+def _audit_report(rnd: random.Random) -> GoldDocument:
+    """감사 보고서 — 감사 결과 + 시정 권고."""
+    auditor = rnd.choice(_NAMES)
+    auditor_title = rnd.choice(["감사관", "수석감사관", "감사실장"])
+    auditee = rnd.choice([n for n in _NAMES if n != auditor])
+    auditee_title = rnd.choice(_TITLES_GOV_POOL)
+    dept = rnd.choice(_DEPT_POOL)
+    abbrev = rnd.choice(_AGENCY_ABBREV_POOL)
+    docnum = f"{abbrev}-감사관실-2026-{rnd.randint(10000, 99999)}"
+    rep_phone = rnd.choice(_PHONE_REPRESENTATIVE)
+    bizreg = rnd.choice(_BIZREG_SAMPLES)
+
+    parts = [
+        ("[감사 보고서]\n\n", None),
+        ("문서번호: ", None),
+        (docnum, "DOC_ID"),
+        ("\n감사기간: 2026년 3월 1일 ~ 4월 30일\n", None),
+        (f"감사대상: {dept}\n\n", None),
+        ("□ 감사관\n", None),
+        ("  - 성명: ", None),
+        (auditor, "PERSON"),
+        (f"\n  - 직급: {auditor_title}\n\n", None),
+        ("□ 감사 결과 (요약)\n", None),
+        (f"  {dept} 의 2025년도 회계 처리 및 업무 수행 사항을 점검한 결과, ", None),
+        ("일부 사항에서 시정이 필요한 사례가 발견되었음.\n\n", None),
+        ("□ 주요 지적 사항\n", None),
+        ("  1) 예산 집행 시 증빙서류 누락 (3건)\n", None),
+        ("  2) 출장비 정산 과다 청구 (1건, 환수 조치 완료)\n", None),
+        ("  3) 위탁업체 (사업자등록번호 ", None),
+        (bizreg, "BUSINESS_REG"),
+        (") 계약 검토 미흡\n\n", None),
+        ("□ 시정 권고\n", None),
+        ("  본 감사 결과에 대하여 다음과 같이 권고함:\n", None),
+        ("  1) 회계 담당자 ", None),
+        (auditee, "PERSON"),
+        (f" {auditee_title} 에 대한 주의 조치\n", None),
+        ("  2) 부서 차원의 회계 처리 매뉴얼 재정비\n", None),
+        ("  3) 위탁계약 사전 법무 검토 의무화\n\n", None),
+        ("□ 후속 조치 보고\n", None),
+        ("  본 권고 사항에 대한 조치 결과를 30일 이내 회신 바람.\n\n", None),
+        ("□ 문의처\n", None),
+        ("  - 감사관실: ", None),
+        (rep_phone, "PHONE"),
+        ("\n\n", None),
+        (rnd.choice(_ATTACHMENT_PHRASES), None),
+    ]
+    return _assemble(parts, template="audit_report", pii_labels={
+        "PERSON", "BUSINESS_REG", "PHONE", "DOC_ID",
+    })
+
+
+def _contract(rnd: random.Random) -> GoldDocument:
+    """용역 계약서 (간이) — 갑/을 + 단가 + 기간."""
+    party_a = rnd.choice(_NAMES)
+    party_a_title = rnd.choice(["대표", "대표이사", "이사장"])
+    party_b = rnd.choice([n for n in _NAMES if n != party_a])
+    party_b_title = rnd.choice(["대표", "대표이사"])
+    company_a = rnd.choice(_COMPANY_POOL)
+    company_b = rnd.choice([c for c in _COMPANY_POOL if c != company_a])
+    bizreg_a = rnd.choice(_BIZREG_SAMPLES)
+    bizreg_b = rnd.choice([b for b in _BIZREG_SAMPLES if b != bizreg_a])
+    addr_a = rnd.choice(_ADDR_ROAD)
+    addr_b = rnd.choice([a for a in _ADDR_ROAD if a != addr_a])
+    contract_num = f"용역-2026-{rnd.randint(10000, 99999)}"
+
+    parts = [
+        ("[용역 계약서]\n\n", None),
+        (f"계약번호: {contract_num}\n", None),
+        ("계약일자: 2026년 5월 21일\n", None),
+        ("계약기간: 2026년 6월 1일 ~ 2026년 12월 31일\n\n", None),
+        ("□ 계약 당사자\n", None),
+        (f"  - 갑: {company_a} (사업자등록번호 ", None),
+        (bizreg_a, "BUSINESS_REG"),
+        (")\n", None),
+        ("       대표자: ", None),
+        (party_a, "PERSON"),
+        (f" ({party_a_title})\n", None),
+        ("       소재지: ", None),
+        (addr_a, "ADDRESS"),
+        ("\n", None),
+        (f"  - 을: {company_b} (사업자등록번호 ", None),
+        (bizreg_b, "BUSINESS_REG"),
+        (")\n", None),
+        ("       대표자: ", None),
+        (party_b, "PERSON"),
+        (f" ({party_b_title})\n", None),
+        ("       소재지: ", None),
+        (addr_b, "ADDRESS"),
+        ("\n\n", None),
+        ("□ 계약 목적\n", None),
+        (f"  갑은 을에게 IT 시스템 구축 용역을 의뢰하며, ", None),
+        ("을은 계약 조건에 따라 이를 성실히 수행한다.\n\n", None),
+        ("□ 용역 대금\n", None),
+        ("  - 총 금액: 금 일억오천만원정 (\\150,000,000)\n", None),
+        ("  - 부가가치세 별도\n", None),
+        ("  - 지급 방식: 착수금 30%, 중도금 40%, 잔금 30%\n\n", None),
+        ("□ 일반 조건\n", None),
+        ("  1) 본 계약에 명시되지 아니한 사항은 「민법」 및 ", None),
+        ("관련 법령에 따른다.\n", None),
+        ("  2) 분쟁 발생 시 서울중앙지방법원을 관할로 한다.\n", None),
+        ("  3) 본 계약은 갑·을 각 1부씩 보관한다.\n\n", None),
+        ("□ 서명\n", None),
+        (f"  갑 {company_a}\n", None),
+        ("     대표자 ", None),
+        (party_a, "PERSON"),
+        (f" {party_a_title} (인)\n", None),
+        (f"  을 {company_b}\n", None),
+        ("     대표자 ", None),
+        (party_b, "PERSON"),
+        (f" {party_b_title} (인)\n", None),
+    ]
+    return _assemble(parts, template="contract", pii_labels={
+        "PERSON", "BUSINESS_REG", "ADDRESS",
+    })
+
+
+def _hr_appointment(rnd: random.Random) -> GoldDocument:
+    """인사 발령 통지 — 부서 이동 / 직급 승진."""
+    employee = rnd.choice(_NAMES)
+    employee_title = rnd.choice(_TITLES_GOV_POOL)
+    rrn = rnd.choice(_RRN_SAMPLES)
+    old_dept = rnd.choice(_DEPT_POOL)
+    new_dept = rnd.choice([d for d in _DEPT_POOL if d != old_dept])
+    emp_id = rnd.randint(20180000, 20240999)
+    abbrev = rnd.choice(_AGENCY_ABBREV_POOL)
+    docnum = f"{abbrev}-인사과-2026-{rnd.randint(10000, 99999)}"
+    handler = rnd.choice([n for n in _NAMES if n != employee])
+
+    parts = [
+        ("[인사 발령 통지서]\n\n", None),
+        ("문서번호: ", None),
+        (docnum, "DOC_ID"),
+        ("\n발령일자: 2026년 6월 1일\n\n", None),
+        ("□ 대상자 정보\n", None),
+        ("  - 성명: ", None),
+        (employee, "PERSON"),
+        ("\n  - 주민등록번호: ", None),
+        (rrn, "RRN"),
+        ("\n  - 사번: ", None),
+        (str(emp_id), "EMPLOYEE_ID"),
+        (f"\n  - 현 직급: {employee_title}\n", None),
+        (f"  - 현 소속: {old_dept}\n\n", None),
+        ("□ 발령 사항\n", None),
+        (f"  - 신규 소속: {new_dept}\n", None),
+        ("  - 발령 사유: 인사 정책에 따른 부서 이동\n", None),
+        ("  - 발령 효력 발생일: 2026년 6월 1일\n\n", None),
+        ("□ 인수인계\n", None),
+        ("  본 발령에 따라 종전 업무 인수인계를 ", None),
+        ("발령일 전까지 완료하시기 바랍니다.\n\n", None),
+        ("□ 담당자\n", None),
+        ("  - 인사 담당자: ", None),
+        (handler, "PERSON"),
+        ("\n  - 연락처: 02-1234-5678\n\n", None),
+        (rnd.choice(_SIGNOFF_PHRASES) + "\n", None),
+    ]
+    return _assemble(parts, template="hr_appointment", pii_labels={
+        "PERSON", "RRN", "EMPLOYEE_ID", "DOC_ID",
+    })
+
+
+def _admin_disposition(rnd: random.Random) -> GoldDocument:
+    """행정 처분 통지서 — 위반 사실 + 처분 내용."""
+    violator = rnd.choice(_NAMES)
+    rrn = rnd.choice(_RRN_SAMPLES)
+    phone = rnd.choice(_PHONE_MOBILE)
+    addr = rnd.choice(_ADDR_ROAD)
+    bizreg = rnd.choice(_BIZREG_SAMPLES)
+    handler = rnd.choice([n for n in _NAMES if n != violator])
+    handler_title = rnd.choice(_TITLES_GOV_POOL)
+    abbrev = rnd.choice(_AGENCY_ABBREV_POOL)
+    docnum = f"{abbrev}-처분-2026-{rnd.randint(10000, 99999)}"
+    rep_phone = rnd.choice(_PHONE_REPRESENTATIVE)
+
+    parts = [
+        ("[행정 처분 통지서]\n\n", None),
+        ("문서번호: ", None),
+        (docnum, "DOC_ID"),
+        ("\n처분일자: 2026년 5월 21일\n\n", None),
+        ("□ 처분 대상자 정보\n", None),
+        ("  - 성명: ", None),
+        (violator, "PERSON"),
+        ("\n  - 주민등록번호: ", None),
+        (rrn, "RRN"),
+        ("\n  - 연락처: ", None),
+        (phone, "PHONE"),
+        ("\n  - 주소: ", None),
+        (addr, "ADDRESS"),
+        ("\n  - 사업자등록번호: ", None),
+        (bizreg, "BUSINESS_REG"),
+        ("\n\n□ 위반 사실\n", None),
+        ("  귀하의 영업장에서 2026년 4월 15일 점검 결과, ", None),
+        ("다음과 같은 법령 위반 사항이 적발되었음을 통지합니다.\n", None),
+        ("  - 위반 일시: 2026년 4월 15일 14:30\n", None),
+        ("  - 위반 내용: 영업시간 외 영업 (식품위생법 제44조)\n\n", None),
+        ("□ 처분 내용\n", None),
+        ("  - 처분 유형: 영업정지 7일\n", None),
+        ("  - 처분 시행일: 2026년 6월 1일 ~ 6월 7일\n", None),
+        ("  - 과징금: 부과 안 함 (1차 위반)\n\n", None),
+        ("□ 이의 신청 안내\n", None),
+        ("  본 처분에 이의가 있으신 경우 처분일로부터 90일 이내에 ", None),
+        ("「행정심판법」에 따라 행정심판을 청구하실 수 있습니다.\n\n", None),
+        ("□ 담당자\n", None),
+        ("  - 담당자: ", None),
+        (handler, "PERSON"),
+        (f" {handler_title}\n", None),
+        ("  - 대표번호: ", None),
+        (rep_phone, "PHONE"),
+        ("\n", None),
+    ]
+    return _assemble(parts, template="admin_disposition", pii_labels={
+        "PERSON", "RRN", "PHONE", "ADDRESS", "BUSINESS_REG", "DOC_ID",
+    })
+
+
 _TEMPLATES: tuple[Callable[[random.Random], GoldDocument], ...] = (
     _gov_decree,
     _civil_petition,
@@ -647,6 +1023,11 @@ _TEMPLATES: tuple[Callable[[random.Random], GoldDocument], ...] = (
     _fire_dispatch,
     _court_decision,
     _tax_notice,
+    _press_release,
+    _audit_report,
+    _contract,
+    _hr_appointment,
+    _admin_disposition,
 )
 
 
@@ -689,6 +1070,11 @@ def generate_document(seed: int | None = None, template: str | None = None) -> G
             "fire_dispatch": _fire_dispatch,
             "court_decision": _court_decision,
             "tax_notice": _tax_notice,
+            "press_release": _press_release,
+            "audit_report": _audit_report,
+            "contract": _contract,
+            "hr_appointment": _hr_appointment,
+            "admin_disposition": _admin_disposition,
         }
         if template not in mapping:
             raise ValueError(f"Unknown template: {template}")

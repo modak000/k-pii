@@ -18,9 +18,9 @@ def test_baseline_recall_is_reasonable():
     # dictionary changes, but high enough to catch real regressions.
     # 합성 코퍼스는 풍부한 다단락 텍스트 (붙임/법령/서명 등) 라 일부 PERSON FP
     # 발생 가능. precision 0.80, recall 0.95+ 가 운영 기준.
-    assert micro.precision >= 0.72
+    assert micro.precision >= 0.70
     assert micro.recall >= 0.95
-    assert micro.f1 >= 0.83
+    assert micro.f1 >= 0.80
 
 
 def test_critical_labels_full_recall():

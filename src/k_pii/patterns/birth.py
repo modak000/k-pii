@@ -39,6 +39,24 @@ _KEYWORDS = (
     "DOB", "Date of Birth", "Birth Date", "birthday",
 )
 
+# 명시적 비-생일 일자 키워드 — 직전에 있으면 DT_BIRTH 거부 (공문서에 흔함)
+# 보도자료 "배포일자", 회의 "회의일자", 결재 "시행일자", 인사 "발령일자" 등.
+_NON_BIRTH_KEYWORDS = (
+    "선고일자", "선고일", "심사일자", "심사일", "처리일자", "처리일",
+    "회의일자", "회의일", "시행일자", "시행일", "공포일자", "공포일",
+    "배포일자", "배포일", "발령일자", "발령일", "접수일자", "접수일",
+    "회신일자", "회신일", "통보일자", "통보일", "처분일자", "처분일",
+    "발급일자", "발급일", "유효기간", "평가기간", "계약기간",
+    "감사기간", "출동일자", "종결일자", "작성일자", "발생일시",
+    "발생일", "발효일", "효력 발생일", "결재일자", "결재일",
+    "회계기간", "회계연도", "기준일",
+)
+
+
+def _has_non_birth_keyword_before(text: str, start: int, window: int = 15) -> bool:
+    head = text[max(0, start - window): start]
+    return any(kw in head for kw in _NON_BIRTH_KEYWORDS)
+
 # 패턴 1: YYYY년 M월 D일 / YYYY년 MM월 DD일
 _PATTERN_KOREAN = re.compile(
     r"(?<![0-9])"
@@ -173,6 +191,9 @@ def detect(text: str) -> Iterator[DetectionResult]:
         month, day = int(m.group(2)), int(m.group(3))
         if not _valid_date(year, month, day):
             continue
+        # 명시적 비-생일 키워드 ("선고일자/시행일자/배포일자" 등) 직전 → 거부
+        if _has_non_birth_keyword_before(text, m.start()):
+            continue
         kw = _has_keyword_before(text, m.start())
         # context anchor 완화: 키워드 없어도 (a) "년생" marker (b) 풀네임 인접 OK
         has_marker = _has_birth_marker_after(text, m.end())
@@ -210,6 +231,9 @@ def detect(text: str) -> Iterator[DetectionResult]:
             continue
         month, day = int(m.group(3)), int(m.group(4))
         if not _valid_date(year, month, day):
+            continue
+        # 명시적 비-생일 키워드 직전 → 거부
+        if _has_non_birth_keyword_before(text, m.start()):
             continue
         kw = _has_keyword_before(text, m.start())
         # 숫자 날짜: 키워드 또는 풀네임 인접 필요
