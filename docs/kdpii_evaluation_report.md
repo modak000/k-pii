@@ -1,8 +1,7 @@
 # KDPII 평가 결과 보고서
 
 > k-pii 라이브러리를 KDPII (Korean Dialog PII) 데이터셋으로 평가한 결과.
-> KDPII 는 현재 공개된 한국어 일반 도메인 PII 평가 벤치마크의 *사실상 유일* 한
-> 선택지로, 본 보고서는 22 카테고리 53,778 문서 평가 결과를 정리.
+> 22 카테고리 53,778 문서 평가 결과를 정리.
 
 생성: 2026-05-21 · 브랜치: `claude/understand-work-status-S4kXM`
 
@@ -26,23 +25,6 @@ Identifiable Information."* **IEEE Access, 2024.**
 | 평균 길이 | 한국어 일상 대화 (메신저·통화 발췌 가공) |
 | PII 라벨 수 | 22 종 |
 | 라벨링 단위 | per-document, form 단위 |
-
-### 한국어 PII 데이터셋의 희소성
-
-검색 (2026-05-21) 결과 *공개* 한국어 일반 도메인 PII 평가 벤치마크는 KDPII
-**단 하나**. 다른 후보는 모두 PII 데이터셋 아님:
-
-| 데이터셋 | 도메인 | PII 평가용? | 비고 |
-|---|---|---|---|
-| **KDPII** | 일상 대화 | **✓** | 본 평가 대상 |
-| KBMC | 의료 | △ | 의료 NER, 환자 식별 일부 |
-| KLUE-NER | 신문기사 | ✗ | 일반 NER (PS/OG/LC/DT/QT/TI) |
-| Naver-창원대 NER | 일반 | ✗ | 일반 NER |
-| KoCHET | 문화유산 | ✗ | Entity 관련 |
-| AI Hub | - | - | 평가용 corpus 미공개 |
-
-→ KDPII 외에는 한국어 *일반 도메인* PII 평가가 불가능. 본 보고서가 k-pii 의
-종합 PII 검출 정확도 측정의 유일한 외부 기준.
 
 ---
 
