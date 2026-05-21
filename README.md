@@ -7,34 +7,57 @@
 
 한국 공공 부문 문서를 위한 규칙 기반 개인정보(PII) 비식별 라이브러리. **외부 ML 없이** 룰만으로 production-ready.
 
-> **상태:** v1.0.0 release-ready — **한국 공공 PII 솔루션**.
-> **32 PII 카테고리** (KDPII 표준 준식별자 포함) + 6 처리 전략 + 5 모드 +
-> HWP/PDF/CSV/XLSX 입력 + Vault AES-256-GCM 암호화 + 감사 로그 + 배치 +
-> 검토 큐 + HTML 리포트 + 한자/로마자 변형 +
-> **OpenAI Privacy Filter / Microsoft Presidio / MCP 옵셔널 연계**.
+> **상태:** v1.1.0 release-ready — **한국 공공 PII 솔루션**.
 >
 > **정확도** (도메인별):
 > - **공공 문서 본문 산문 (메인 도메인): F1 ≈ 0.83**
-> - 합성 풍부화 코퍼스 (13 템플릿): F1 = 0.85 (회귀 감지)
-> - KDPII 일상 대화 (참고): F1 = 0.699 (풀네임 평가) — *대화체 도메인, 우리 도메인 지표 아님*
+>   *(내부 측정 — 12개 가공 공문서 본문 산문 케이스, [`docs/EVALUATION_REPORT.md`](docs/EVALUATION_REPORT.md) §4-C)*
+> - 합성 풍부화 코퍼스 (13 템플릿): F1 = 0.85 *(회귀 감지 sanity check, 실제 정확도 X)*
+> - KDPII 일상 대화 (참고): F1 = 0.699 *(풀네임 평가, 우리 도메인 지표 아님)*
 > - KLUE-NER 신문기사 PERSON (참고): F1 = 0.376
->
-> **코어 deps 0개**. 입력·보안·ML·Presidio·MCP 기능은 모두 extras 로 분리.
->
-> **코어 deps 0개**. 입력·보안·ML·Presidio·MCP 기능은 모두 extras 로 분리.
+
+## 라이브러리 구성 — 한눈에
+
+### 검출
+- **32 PII 카테고리** — 결정적 (체크섬 8개) + 키워드 anchor (8개) + 형식 (7개) + 사전·휴리스틱 (5개) + 인적 속성 (6개)
+- 카테고리별 전체 표 + 점수는 [§Tier 분류](#카테고리별-통합-표-kdpii-53778-문서-기준--참고용) 참조
+
+### 처리 모드 5종 — *얼마나 엄격히 차단할지 사용자가 선택*
+`PARANOID` / `STRICT` / `BALANCED` / `PERMISSIVE` / `AUDIT`
+
+### 치환 전략 6종 — *차단된 값을 어떻게 바꿀지*
+`tokenize` (가역, Vault 복원) / `redact` / `asterisk` / `partial` / `hashed` / `fpe` (형식 유지)
+
+### 부가 기능 (필요한 것만 설치, 코어와 분리)
+
+| 기능 | 설명 | 설치 |
+|---|---|---|
+| **HWP/HWPX/DOCX/PDF 입력** | 한컴오피스 + Word + PDF 자동 파싱 (표·머리말·메타) | `pip install k-pii[file]` |
+| **Vault AES-256-GCM 암호화** | 토큰화된 원본을 암호화해 외부 저장 (PBKDF2 480k iter) | `pip install k-pii[security]` |
+| **감사 로그** | 모든 `reveal()` (복원) 호출을 JSONL 로 기록 | 코어 포함 |
+| **배치 처리** | 디렉토리 일괄 + 병렬 워커 | 코어 포함 |
+| **검토 큐** | confidence 낮은 후보를 사람이 OK/오탐 마킹 | 코어 포함 |
+| **HTML 리포트** | 색상 코딩 + 인터랙티브 시각화 | 코어 포함 |
+| **한자/로마자 변형 매칭** | `洪吉童` → `홍길동`, `Hong Gildong` → `홍길동` | 코어 포함 |
+| **OpenAI Privacy Filter 연계** | LLM hybrid — 약한 신호 케이스만 LLM 위임 | `pip install k-pii[ml]` |
+| **Microsoft Presidio 연계** | Presidio 의 영어 PII 검출과 hybrid | `pip install k-pii[presidio]` |
+| **Claude Desktop MCP 서버** | Model Context Protocol 로 AI 에이전트가 PII 처리 직접 호출 | `pip install k-pii[mcp]` |
+
+→ **코어** (`pip install k-pii`): 32 카테고리 검출 + 모든 모드/전략/감사로그/배치/검토큐/HTML — *외부 라이브러리 의존 0개* (Python 표준 라이브러리만)
+→ **extras**: HWP·암호화·LLM 통합 같은 *선택* 기능. 필요할 때만 설치.
 
 ## 설치
 
 ```bash
-pip install k-pii                       # 코어만 — deps 0
-pip install k-pii[file]                 # + HWP/PDF 입력
-pip install k-pii[security]             # + Vault AES-GCM 암호화
-pip install k-pii[ml]                   # + OpenAI Privacy Filter
-pip install k-pii[presidio]             # + Microsoft Presidio plugin
+pip install k-pii                       # 32 카테고리 검출 + 6 전략 + 5 모드 (deps 0)
+pip install k-pii[file]                 # + HWP/HWPX/DOCX/PDF 자동 파싱
+pip install k-pii[security]             # + Vault 암호화 (AES-256-GCM)
+pip install k-pii[ml]                   # + OpenAI Privacy Filter (transformers + torch)
+pip install k-pii[presidio]             # + Microsoft Presidio
 pip install k-pii[mcp]                  # + Claude Desktop MCP 서버
 pip install k-pii[all]                  # 모든 옵션
 ```
->
+
 > **AI 에이전트가 처음 이 레포에 합류한다면:** [CLAUDE.md](CLAUDE.md) 먼저 읽어주세요. 미션·설계 원칙·결정 기록·다음에 할 일이 모두 들어있습니다.
 
 ## 개요
