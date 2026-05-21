@@ -132,3 +132,74 @@ python -m k_pii.eval.model_comparison data/kdpii/test.json \
 3. **PERSON 카테고리 부분만 풀네임 (3자+) + 별명 (1-2자) 분리 보고**.
    현재는 풀네임만 평가했으나 별명 포함 평가도 별도 제공하면 두 모델의
    별명 검출 능력 차이가 드러남.
+
+---
+
+## 9. 공정 비교 보충 — 라벨 스코프 제한 (Apples-to-Apples)
+
+> 위 섹션 3 의 카테고리별 표를 보면 *11개 카테고리에서 openai/privacy-filter
+> F1 = 0.000*. 이는 모델이 "검출 실패" 한 게 아니라 **그 라벨 자체가 openai
+> 모델 출력 공간에 없어서** 모든 gold 가 자동 FN 으로 잡힌 결과. 즉
+> *모델 품질 차이가 아니라 스코프 차이*. 본 섹션은 이를 보정한 공정 비교.
+
+### 9.1 openai/privacy-filter 의 실제 라벨 스코프
+
+| openai 라벨 | k-pii 매핑 |
+|------------|-----------|
+| `private_person` | PERSON |
+| `private_email` | EMAIL |
+| `private_phone` | PHONE |
+| `private_address` | ADDRESS |
+| `private_date` | DT_BIRTH |
+| `private_url` | URL |
+| `account_number` | ACCOUNT |
+| `secret` | (k-pii 대응 X, 패스워드/API 키 등 일반) |
+
+→ openai 가 출력 *가능* 한 k-pii 라벨은 **7종** 뿐 (`PERSON · EMAIL · PHONE
+· ADDRESS · DT_BIRTH · URL · ACCOUNT`).
+
+openai 의 출력 공간에 *없는* k-pii 카테고리 (KDPII gold 에는 존재):
+RRN · FRN · CARD · PASSPORT · DRIVER_LICENSE · VEHICLE · MAJOR · EDUCATION
+· POSITION · IP · AGE · HEIGHT · WEIGHT — **13종**. 이들의 openai F1=0.000
+은 "실력" 이 아니라 "스코프 밖" 의 의미.
+
+### 9.2 공정 비교 — 7 공통 카테고리만 재집계
+
+| 라벨 | k-pii (TP/FP/FN) | k-pii F1 | openai (TP/FP/FN) | openai F1 |
+|------|-----------------:|---------:|------------------:|----------:|
+| PERSON | 21 / 198 / 71 | 0.135 | 29 / 273 / 63 | **0.147** |
+| EMAIL | 81 / 0 / 0 | **1.000** | 81 / 1 / 0 | 0.994 |
+| PHONE | 124 / 2 / 0 | **0.992** | 97 / 121 / 29 | 0.564 |
+| ADDRESS | 69 / 13 / 100 | **0.550** | 19 / 68 / 141 | 0.154 |
+| DT_BIRTH | 34 / 1 / 36 | **0.648** | 6 / 21 / 65 | 0.122 |
+| URL | 38 / 0 / 1 | **0.987** | 23 / 12 / 18 | 0.605 |
+| ACCOUNT | 61 / 11 / 16 | **0.819** | 48 / 134 / 37 | 0.360 |
+| **(공정 micro)** | **428 / 225 / 224** | **0.656** | **303 / 630 / 353** | **0.382** |
+
+**공정 스코프 결론:** k-pii micro F1 = **0.656** vs openai = **0.382**. 즉
+openai 가 가장 자신 있는 7개 라벨 영역에서만 비교해도 k-pii 가 **약 1.72배**
+우위. PERSON 만 openai 가 미세 우위 (둘 다 0.13~0.15 수준, KDPII 대화체
+도메인의 별명/외자 특성 때문).
+
+### 9.3 그러면 "전체 0.699 vs 0.271" 비교는 무의미한가?
+
+아니오 — *해석에 주의가 필요할 뿐* 의미는 있음. 한국 공공 부문 PII 보호의
+실제 요구사항은 **RRN, FRN, 운전면허, 여권, 사업자등록번호 같은 한국 특화
+식별번호 검출** 이 핵심 (개인정보보호법 시행령 제19조 고유식별정보). 이 영역
+을 *전혀 라벨로 출력하지 못하는* 모델은 한국 공공 도메인 배포에 부적합.
+
+> "openai/privacy-filter 는 라벨 스코프가 다르므로 한국 공공 PII 보호 용도
+> 로는 그대로 쓸 수 없다" — 이게 본 평가의 핵심 메시지이며 그건 micro F1
+> 0.271 으로 정량화된 게 맞음. 다만 이는 *모델의 인지 정확도 부족* 이 아니라
+> *모델의 라벨 정의 차이* 라는 점을 본 섹션 9 가 명확히 함.
+
+### 9.4 향후 확장 — account_number 의 다중 매핑
+
+KDPII test 에서 RRN-shape 문자열 "880101-1234568" 을 openai 가 `account_number`
+로 검출하는 사례를 확인. 즉 openai 의 `account_number` 는 사실상 *범용 숫자
+ID catch-all* 로 동작. 본 평가의 OPENAI_TO_KPII 매핑은 1:1 (`account_number`
+→ `ACCOUNT`) 이었으나, 1:N 매핑 (`account_number` → {ACCOUNT, RRN, CARD,
+PASSPORT, DRIVER_LICENSE}) 로 확장하면 openai 의 ACCOUNT/RRN/CARD 점수가
+일부 회복 가능. 후속 평가에서 별도 제공 예정 (해당 매핑 변경은 본 보고서
+이후 코드 패치 + 재실행 후 *별도 섹션* 으로 추가; 본 섹션 9.2 표는 1:1
+매핑 기준 — 같은 평가 실행본 (`data/corpus/kdpii_3way_full.txt`) 의 숫자).
