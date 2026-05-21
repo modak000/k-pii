@@ -171,54 +171,19 @@ def crawl_korea_kr(max_articles: int = 25) -> list[tuple[str, str]]:
 # ----------------------------------------------------------------------------
 
 def crawl_casenote(max_cases: int = 15) -> list[tuple[str, str]]:
-    """Crawl recent 판결문 from casenote.kr.
+    """Stub — casenote.kr requires login for case content access.
 
-    casenote.kr publishes court rulings (already de-identified by the court).
-    We search recent entries and fetch the full text of each.
+    Probed 2026-05-21 (commit after de5ddf2): root page (27KB) and search page
+    (5.8KB) both render via JavaScript and contain *no* judgment-text URLs in
+    the initial HTML. The site's /pro/#pricing reveals a paywall. Free tier is
+    metadata/intro only.
+
+    Left here as a stub for when an authenticated mirror or open dataset of
+    Korean court judgments is found (candidates: 종합법률정보 ↦ 도메인 폐기됨,
+    AI Hub 569 ↦ 안심존, 국가법령정보센터 ↦ JS 렌더링).
     """
-    # casenote search — fetch judgment listings (URL must be ASCII; Korean params encoded)
-    search_url = (
-        "https://casenote.kr/search/?"
-        + urllib.parse.urlencode({"q": "판결", "page": "1"})
-    )
-    try:
-        html = _fetch(search_url)
-    except Exception as e:
-        print(f"  casenote.kr search FAIL: {e}")
-        return []
-    # Case detail URLs look like /대법원/2023다12345 etc — Korean court name + case id
-    case_paths = re.findall(r'href="(/[가-힣]+/[가-힣0-9]+)"', html)
-    case_paths = sorted(set(case_paths))[:max_cases * 2]  # over-fetch, some may fail
-    print(f"  casenote.kr: found {len(case_paths)} case paths, will fetch up to {max_cases}")
-    out: list[tuple[str, str]] = []
-    for path in case_paths:
-        if len(out) >= max_cases:
-            break
-        url = "https://casenote.kr" + path
-        try:
-            page = _fetch(url)
-        except Exception as e:
-            print(f"  casenote.kr {path} FAIL: {e}")
-            time.sleep(1.0)
-            continue
-        # casenote uses <div class="judgement"> or similar
-        body_html = (
-            _extract_div(page, "judgement")
-            or _extract_div(page, "judgement_text")
-            or _extract_div(page, "case-content")
-            or _extract_div(page, "case_content")
-        )
-        if not body_html:
-            time.sleep(1.0)
-            continue
-        text = _strip_html(body_html)
-        if len(text) < 500:
-            time.sleep(1.0)
-            continue
-        out.append((f"casenote:{path}", text))
-        print(f"  casenote.kr {path}: {len(text):,} chars")
-        time.sleep(1.0)
-    return out
+    print("  casenote.kr: paywalled (login required for content) — skipped")
+    return []
 
 
 # ----------------------------------------------------------------------------
@@ -232,33 +197,21 @@ LAW_TITLES = [
 
 
 def crawl_law_go_kr() -> list[tuple[str, str]]:
-    out: list[tuple[str, str]] = []
-    for title in LAW_TITLES:
-        encoded = urllib.parse.quote(title)
-        # law.go.kr has a search-by-name endpoint (path must be fully ASCII)
-        url = f"https://www.law.go.kr/{urllib.parse.quote('법령')}/{encoded}"
-        try:
-            page = _fetch(url)
-        except Exception as e:
-            print(f"  law.go.kr {title} FAIL: {e}")
-            continue
-        # law.go.kr embeds the law text in a content area
-        body_html = (
-            _extract_div(page, "lawcon")
-            or _extract_div(page, "law_content")
-            or _extract_div(page, "content")
-        )
-        if not body_html:
-            print(f"  law.go.kr {title}: no content div found")
-            continue
-        text = _strip_html(body_html)
-        if len(text) < 500:
-            print(f"  law.go.kr {title}: too short ({len(text)})")
-            continue
-        out.append((f"law.go.kr:{title}", text))
-        print(f"  law.go.kr {title}: {len(text):,} chars")
-        time.sleep(1.0)
-    return out
+    """Stub — law.go.kr is JavaScript-rendered, content not in initial HTML.
+
+    Probed 2026-05-21: /법령/X returns a 1.3KB shell that loads law text via
+    iframe/AJAX. The /lsSc.do search page returns 273KB but it's almost
+    entirely JS scaffolding.
+
+    Workable alternatives that an actual agent might pursue:
+      - 국가법령정보 OPEN API (open.law.go.kr) — requires registration + key
+      - Korean Wikisource (ko.wikisource.org) — 위키문헌 has many law texts
+        as plain Wikitext, fetchable via the same MediaWiki API used for
+        Wikipedia
+      - 국회 의안정보시스템 — bill texts, public
+    """
+    print("  law.go.kr: JavaScript-rendered shell, no static content — skipped")
+    return []
 
 
 # ----------------------------------------------------------------------------
