@@ -147,13 +147,75 @@ k-pii 단독 KLUE-NER Korean-only F1 = 0.331. 두 도구 union 시 예상:
 
 ## 평가 비교 (벤치마크)
 
-```bash
-# k-pii 단독
-python -m k_pii.eval.klue_benchmark klue-ner-v1.1_dev.tsv --korean-only
+### 재현 명령어
 
-# k-pii + Privacy Filter 합산 (사용자가 직접 코드로 실행)
-# (CLI 옵션은 향후 추가 예정)
+```bash
+# k-pii 단독 (룰만)
+python -m k_pii.eval.kdpii data/kdpii/test.json --person-min-length 3
+
+# k-pii vs Privacy Filter 직접 비교 (gold = KDPII 실제 인간 라벨)
+python -m k_pii.eval.model_comparison data/kdpii/test.json \
+    --mode kdpii --backend onnx --device cpu --cache-dir ./models
 ```
+
+### 실측 결과 (2026-05-21, KDPII test 4,891 docs)
+
+> **먼저 짚고 가야 할 것 — 두 도구는 비교 대상이 아니라 보완 대상.**
+> - **k-pii**: 한국 공공 부문 PII *전용 설계*. 20+ 라벨 — RRN·FRN·운전면허·여권·사업자·법인 등 *한국 특화 식별번호*가 핵심.
+> - **Privacy Filter**: 다국어 *일반 PII* 모델. 8 라벨 (PERSON·EMAIL·PHONE·ADDRESS·DATE·URL·ACCOUNT·SECRET). 영어 중심 (multilingual 11개 언어 중 한국어 부속). 한국 특화 식별번호 라벨이 *학습 스코프 밖*.
+>
+> 같은 F1 수치를 두 시스템에 적용하면 *모델 성능 비교*가 아니라 *도메인 정의 차이*를 잰다.
+
+#### (가) KDPII 전체 라벨 (20 카테고리, k-pii 스코프) — 단독 비교
+
+| | k-pii | Privacy Filter |
+|--|------:|--------------:|
+| 정탐 / 오탐 / 미탐 | 859 / 297 / 444 | 303 / 630 / 1,003 |
+| Micro F1 | 0.699 | 0.271 |
+
+→ Privacy Filter 의 0.271 은 **모델 성능 부족이 아니라 라벨 스코프 부재**. 한국 특화 13 카테고리 (RRN/FRN/PASSPORT/DRIVER_LICENSE/VEHICLE/MAJOR/EDUCATION/POSITION/IP/AGE/HEIGHT/WEIGHT/CARD) 에서 자동 0점. 이 결과의 실제 의미:
+
+> 한국 공공 PII 보호 요구사항 (개인정보 보호법 시행령 제19조 고유식별정보) 을 *Privacy Filter 단독으로는 커버 불가*. 단독 대체 시 critical PII 누출.
+
+#### (나) Privacy Filter 출력 가능 라벨 7종만 — 공정 비교
+
+PERSON · EMAIL · PHONE · ADDRESS · DT_BIRTH · URL · ACCOUNT 한정:
+
+| | k-pii | Privacy Filter |
+|--|------:|--------------:|
+| 정탐 / 오탐 / 미탐 | 428 / 225 / 224 | 303 / 630 / 353 |
+| Micro F1 | 0.656 | 0.382 |
+
+→ Privacy Filter 의 *홈그라운드 라벨*에서도 한국어 일상 대화체 (KDPII) 에서는 k-pii 가 더 정확. 주 원인은 학습 분포 차이 (영어 중심 vs 한국 도메인 전용).
+
+#### 카테고리별 상세 — 둘 다 출력 가능한 라벨
+
+| 라벨 | gold | k-pii F1 | PF F1 | 관찰 |
+|------|----:|---------:|------:|------|
+| EMAIL | 81 | 1.000 | 0.994 | 거의 동률, 둘 다 신뢰 가능 |
+| PHONE | 124 | 0.992 | 0.564 | PF FP 121건 |
+| URL | 39 | 0.987 | 0.605 | k-pii 의 패턴이 더 좁음 |
+| ACCOUNT | 77 | 0.819 | 0.360 | PF FP 134건 (account_number 가 catch-all) |
+| ADDRESS | 169 | 0.550 | 0.154 | 둘 다 자연어 주소 어려움 |
+| DT_BIRTH | 70 | 0.648 | 0.122 | 한국식 날짜 표현이 PF 학습 부족 |
+| **PERSON** | 92 | 0.135 | **0.147** | **PF 미세 우위**. KDPII 별명/외자 다수 — k-pii의 도메인(공식 문서, 직책-anchor)과 다름 |
+
+#### Union 모드 효과 (가설, 실측 미시행)
+
+위 측정은 *단독* 두 시스템. union 모드 (k-pii + Privacy Filter 결합) 의 실측 효과는 본 보고서 범위 밖. 예상:
+- **PERSON recall ↑** — PF 가 별명·외자 더 catch (이 도메인의 약점 보강)
+- **EMAIL/PHONE precision** 변동 적음 — 둘 다 이미 0.99+
+- **한국 특화 라벨** (RRN 등) k-pii 단독과 동일 — PF 가 그 라벨을 출력 못함
+
+### 솔직한 결론
+
+본 평가는 **"k-pii vs Privacy Filter 누가 이기느냐"** 의 답이 아니다.
+
+> 두 도구는 *다른 목적용*. 한국 공공 부문 배포 시 Privacy Filter 단독 사용은 부적합 (라벨 스코프). k-pii 의 한국 특화 + Privacy Filter 의 일반 PII 자연어 강점을 *결합 (union 모드)* 하는 게 본 문서의 권장. 본 섹션 위 4가지 병합 모드 (union/intersection/cross_validation/enrich_primary) 가 그 통합의 도구.
+
+진정한 head-to-head 비교 대상은 **OpenMed/privacy-filter-multilingual** (한국어 공식 지원, 217 라벨 — k-pii 의 다수 카테고리 커버). 본 평가에는 미포함 (torch 버전 매칭 이슈 — 후속 평가 예정).
+
+상세 분석 + 카테고리 풀 표: `docs/model_comparison_report.md`. 원본 평가 출력: `data/corpus/kdpii_3way_full.txt`.
 
 ## 데이터 출처
 
