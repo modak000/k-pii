@@ -1,11 +1,7 @@
 # ko-pii
 
-[![CI](https://github.com/modak000/ko-pii/actions/workflows/ci.yml/badge.svg)](https://github.com/modak000/ko-pii/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/ko-pii.svg)](https://pypi.org/project/ko-pii/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-699%20passed-brightgreen.svg)](#)
-[![Korean PII](https://img.shields.io/badge/도메인-한국-red.svg)](#)
 
 **한국어 문서의 개인정보를 검출하고 가역적으로 가명화하는 Python 라이브러리.** 외부 ML 의존성 없이 룰 + 사전 + 체크섬만으로 동작. 공공 문서에서 특히 강하며, 어떤 ML 파이프라인의 전처리 레이어로도 활용 가능.
 
@@ -66,8 +62,8 @@ redact (카테고리명 치환):
 4. [평가 결과](#평가-결과)
 5. [사용법](#사용법)
 6. [32 PII 카테고리](#32-pii-카테고리)
-7. [검출 정책 — 어떤 접두어·anchor 가 작동하는가](#검출-정책---어떤-접두어anchor-가-작동하는가)
-8. [처리 모드 + 치환 전략](#처리-모드-치환-전략)
+7. [검출 정책 — 어떤 접두어·anchor 가 작동하는가](#검출-정책--어떤-접두어anchor-가-작동하는가)
+8. [처리 모드 + 치환 전략](#처리-모드--치환-전략)
 9. [부가 기능](#부가-기능)
 10. [FAQ](#faq)
 11. [개발](#개발)
