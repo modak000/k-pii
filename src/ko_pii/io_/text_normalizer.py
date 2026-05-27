@@ -32,30 +32,49 @@ _SOFT_LINEBREAK = re.compile(r'(?<!\n)\n(?!\n)')
 # --- 칸별 공백 정규화 패턴 ---
 # "9 5 1 2 3 0 - 1 8 5 0 4 3 1" → "951230-1850431"
 # 공백(space)만 — 줄바꿈(\n) 제외
+# 기본: "9 5 1 2 3 0 - 1 8 5 0 4 3 1" (숫자 사이 공백 1개)
 _SPACED_FIELD = re.compile(
     r'(?<![0-9A-Za-z\-])'
     r'([0-9A-Za-z](?: [0-9A-Za-z\-]){4,})'
     r'(?![0-9A-Za-z\-]| [0-9A-Za-z\-])'
 )
 
+# 확장: "49 9 - 8 7- 0 3 8" (하이픈 양쪽에 공백이 불균일)
+# 숫자/하이픈이 공백으로 구분되되 하이픈 앞뒤 공백이 있거나 없을 수 있음
+_SPACED_FIELD_WITH_HYPHEN = re.compile(
+    r'(?<![0-9A-Za-z\-])'
+    r'(\d[\d ]{2,}\s*-\s*[\d ]{1,}\s*-?\s*[\d ]{2,}\d)'
+    r'(?![0-9])'
+)
+
 
 def _collapse_spaced_field(text: str) -> tuple[str, list[int]]:
     """칸별 공백 패턴의 공백을 제거하고 offset 맵 반환."""
+    # 두 패턴의 매치를 합쳐서 위치순 정렬
+    matches: list[tuple[int, int]] = []
+    for m in _SPACED_FIELD.finditer(text):
+        matches.append((m.start(), m.end()))
+    for m in _SPACED_FIELD_WITH_HYPHEN.finditer(text):
+        # 기본 패턴과 겹치지 않는 경우만 추가
+        s, e = m.start(), m.end()
+        if not any(ms <= s < me or ms < e <= me for ms, me in matches):
+            matches.append((s, e))
+    matches.sort()
+
     result: list[str] = []
     offset_map: list[int] = []
     last_end = 0
-    for m in _SPACED_FIELD.finditer(text):
-        for i in range(last_end, m.start()):
+    for ms, me in matches:
+        for i in range(last_end, ms):
             result.append(text[i])
             offset_map.append(i)
-        span = m.group(0)
-        span_start = m.start()
-        for j, ch in enumerate(span):
+        for j in range(ms, me):
+            ch = text[j]
             if ch == ' ':
                 continue
             result.append(ch)
-            offset_map.append(span_start + j)
-        last_end = m.end()
+            offset_map.append(j)
+        last_end = me
     for i in range(last_end, len(text)):
         result.append(text[i])
         offset_map.append(i)
