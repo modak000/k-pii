@@ -35,6 +35,17 @@ _PATTERN = re.compile(
     r"(?![0-9])"
 )
 
+# PDF 서식용: 앞에 1자리 숫자(관계코드 등)가 붙은 패턴
+# "1951230-1850431" → 앞 1은 관계코드, 951230-1850431이 RRN
+_PATTERN_PREFIXED = re.compile(
+    r"(?<![0-9])"
+    r"[0-9]"             # 1자리 prefix (관계코드 등)
+    r"([0-9]{6})"
+    r"[-\s]?"
+    r"([0-9]{7})"
+    r"(?![0-9])"
+)
+
 _CENTURY_BY_GENDER_DIGIT: dict[int, int] = {
     1: 1900, 2: 1900,
     3: 2000, 4: 2000,
@@ -56,41 +67,61 @@ def _decode_birth_date(yymmdd: str, gender_digit: int) -> date | None:
         return None
 
 
+def _emit(m: re.Match, offset: int = 0) -> DetectionResult | None:
+    """공통 RRN 검출 로직. offset = 매치 내에서 front 시작 위치 보정."""
+    front, back = m.group(1), m.group(2)
+    gender_digit = int(back[0])
+    birth = _decode_birth_date(front, gender_digit)
+    if birth is None:
+        return None
+
+    digits_only = front + back
+    checksum_ok = is_valid_checksum(digits_only)
+
+    evidence = ["pattern:rrn", f"date_valid:{birth.isoformat()}"]
+    if checksum_ok:
+        evidence.append("checksum:valid")
+        confidence = 1.0
+    else:
+        evidence.append("checksum:invalid_or_post_2020")
+        confidence = 0.7
+
+    # span은 prefix를 제외한 실제 RRN 부분
+    real_text = m.group(0)[offset:]
+    return DetectionResult(
+        label=LABEL,
+        text=real_text,
+        start=m.start() + offset,
+        end=m.end(),
+        risk_level=RiskLevel.CRITICAL,
+        confidence=confidence,
+        evidence=evidence,
+        legal_basis=LEGAL_BASIS,
+        extra={
+            "front": front,
+            "back": back,
+            "birth_date": birth.isoformat(),
+            "gender_digit": gender_digit,
+            "checksum_valid": checksum_ok,
+            "category": CATEGORY,
+        },
+    )
+
+
 def detect(text: str) -> Iterator[DetectionResult]:
     """Yield a DetectionResult for each plausible RRN found in *text*."""
+    seen: set[tuple[int, int]] = set()
+
+    # 기본 패턴
     for m in _PATTERN.finditer(text):
-        front, back = m.group(1), m.group(2)
-        gender_digit = int(back[0])
-        birth = _decode_birth_date(front, gender_digit)
-        if birth is None:
-            continue
+        result = _emit(m)
+        if result is not None:
+            seen.add((result.start, result.end))
+            yield result
 
-        digits_only = front + back
-        checksum_ok = is_valid_checksum(digits_only)
-
-        evidence = ["pattern:rrn", f"date_valid:{birth.isoformat()}"]
-        if checksum_ok:
-            evidence.append("checksum:valid")
-            confidence = 1.0
-        else:
-            evidence.append("checksum:invalid_or_post_2020")
-            confidence = 0.7
-
-        yield DetectionResult(
-            label=LABEL,
-            text=m.group(0),
-            start=m.start(),
-            end=m.end(),
-            risk_level=RiskLevel.CRITICAL,
-            confidence=confidence,
-            evidence=evidence,
-            legal_basis=LEGAL_BASIS,
-            extra={
-                "front": front,
-                "back": back,
-                "birth_date": birth.isoformat(),
-                "gender_digit": gender_digit,
-                "checksum_valid": checksum_ok,
-                "category": CATEGORY,
-            },
-        )
+    # PDF prefix 패턴 (관계코드 등 1자리 숫자 뒤 RRN)
+    for m in _PATTERN_PREFIXED.finditer(text):
+        result = _emit(m, offset=1)
+        if result is not None and (result.start, result.end) not in seen:
+            seen.add((result.start, result.end))
+            yield result
