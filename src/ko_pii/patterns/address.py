@@ -58,6 +58,22 @@ _PATTERN_JIBUN = re.compile(
     r"(?:\s*번지)?"
 )
 
+# 동호수 확장 패턴 — 주소 직후 "(N동N호)" / "N동 N호" / "N층" / "(아파트명)"
+_PATTERN_DETAIL = re.compile(
+    r'\s*'
+    r'(?:'
+    r'(\d+동\s*\d+호)'        # 103동1202호, 103동 1202호
+    r'|(\d+동)'               # 103동 (호수 없이)
+    r'|(\d+호)'               # 1202호 (동 없이)
+    r'|(\d+층)'               # 5층
+    r')'
+)
+
+# 괄호 안 상세 — "(신정동,롯데캐슬킹덤아파트)" 등
+_PATTERN_PAREN_DETAIL = re.compile(
+    r'\s*\([가-힣A-Za-z0-9,·\s]+\)'
+)
+
 # 대화체 단독 주소 — 시군구 또는 동 (번지 옵션), 광역 없음
 # 강한 anchor keyword 25자 윈도우 내 필수.
 _PATTERN_LOOSE = re.compile(
@@ -99,6 +115,32 @@ def _first_district_of(districts_str: str) -> str | None:
     return parts[0] if parts else None
 
 
+def _extend_with_detail(det: DetectionResult, text: str) -> DetectionResult:
+    """주소 검출 결과 직후 동호수/괄호 상세가 이어지면 span 확장."""
+    pos = det.end
+    extended_end = det.end
+    extended_text = det.text
+
+    # 동호수 패턴
+    m = _PATTERN_DETAIL.match(text, pos)
+    if m:
+        extended_end = m.end()
+        extended_text = text[det.start:extended_end]
+        pos = extended_end
+
+    # 괄호 상세 "(신정동,롯데캐슬킹덤아파트)"
+    m2 = _PATTERN_PAREN_DETAIL.match(text, pos)
+    if m2:
+        extended_end = m2.end()
+        extended_text = text[det.start:extended_end]
+
+    if extended_end == det.end:
+        return det
+
+    from dataclasses import replace
+    return replace(det, text=extended_text.strip(), end=extended_end)
+
+
 def detect(text: str) -> Iterator[DetectionResult]:
     seen: set[tuple[int, int]] = set()
 
@@ -122,9 +164,7 @@ def detect(text: str) -> Iterator[DetectionResult]:
         anchor = _has_anchor(text, m.start(), city, districts)
         if anchor is None:
             continue
-        span = (m.start(), m.end())
-        seen.add(span)
-        yield DetectionResult(
+        det = DetectionResult(
             label=LABEL,
             text=m.group(0).strip(),
             start=m.start(),
@@ -142,6 +182,10 @@ def detect(text: str) -> Iterator[DetectionResult]:
                 "category": CATEGORY,
             },
         )
+        det = _extend_with_detail(det, text)
+        span = (det.start, det.end)
+        seen.add(span)
+        yield det
 
     for m in _PATTERN_JIBUN.finditer(text):
         span = (m.start(), m.end())
@@ -159,8 +203,7 @@ def detect(text: str) -> Iterator[DetectionResult]:
         anchor = _has_anchor(text, m.start(), city, districts)
         if anchor is None:
             continue
-        seen.add(span)
-        yield DetectionResult(
+        det = DetectionResult(
             label=LABEL,
             text=m.group(0).strip(),
             start=m.start(),
@@ -178,6 +221,9 @@ def detect(text: str) -> Iterator[DetectionResult]:
                 "category": CATEGORY,
             },
         )
+        det = _extend_with_detail(det, text)
+        seen.add((det.start, det.end))
+        yield det
 
     # 3) 대화체 단독 주소 — 시군구 또는 동, 강한 keyword anchor 필요
     from ko_pii.dictionaries.districts import ALL_DISTRICTS
