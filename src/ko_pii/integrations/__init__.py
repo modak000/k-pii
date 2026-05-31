@@ -9,6 +9,12 @@
   · 한국어 일반 NER 보강
   · ``pip install ko-pii[ml]`` 로 ML 의존성 설치
   · GPU 없이도 동작 (CPU 추론 가능, 다소 느림)
+- ``KPiiRecognizer`` (``presidio_plugin``) — Microsoft Presidio recognizer 등록 (``[presidio]``)
+
+RAG 연동 (검색 결과 PII 마스킹 — 검색 → 마스킹 → LLM):
+- ``KoPiiNodePostprocessor`` (``llamaindex``) — LlamaIndex node postprocessor (``[llamaindex]``)
+- ``KoPiiRedactor`` (``langchain``) — LangChain ``Runnable`` (``[langchain]``)
+  · 같은 인물 = 같은 토큰 일관성, ``vault`` 로 답변 후 복원 가능
 
 연계 패턴:
 - **Layered (A)**: ko-pii 결정적 PII + 보조 검출기 자연어 = 합산 → 가장 일반적

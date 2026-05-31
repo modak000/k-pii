@@ -5,6 +5,17 @@
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-05-31
+
+### Added
+- **RAG 파이프라인 연동** — 검색 결과를 LLM 에 넣기 전 PII 마스킹 (검색 → 마스킹 → LLM):
+  - `KoPiiNodePostprocessor` (`integrations.llamaindex`) — LlamaIndex node postprocessor (`[llamaindex]`)
+  - `KoPiiRedactor` (`integrations.langchain`) — LangChain `Runnable` (`[langchain]`)
+  - 한 검색 결과 안에서 *같은 인물 = 같은 토큰*(`<PERSON_1>`) 일관성 유지 → LLM 이 동일 개체 추론 가능
+  - `vault` 전달 시 답변 생성 후 `vault.reveal()` 로 권한 기반 복원
+  - 모듈 import 는 프레임워크 없이도 안전 (soft import), 코어 의존성 불변
+- README **"왜 필요한가"** 섹션 — PIPA·폐쇄망·결정적 검출 보완·RAG 양단 차단 프레이밍
+
 ## [1.5.0] - 2026-05-31
 
 ### Added
@@ -81,7 +92,8 @@ Phase 9 — 실데이터 평가 + 룰 정제.
 
 전체 Phase 1~11 개발 히스토리는 git log 및 `docs/` 참조.
 
-[Unreleased]: https://github.com/modak000/ko-pii/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/modak000/ko-pii/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/modak000/ko-pii/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/modak000/ko-pii/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/modak000/ko-pii/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/modak000/ko-pii/compare/v1.2.0...v1.3.0

@@ -57,18 +57,32 @@ redact (카테고리명 치환):
 
 ## 목차
 
-1. [주요 특징](#주요-특징)
-2. [설치](#설치)
-3. [사용 시나리오](#사용-시나리오)
-4. [평가 결과](#평가-결과)
-5. [사용법](#사용법)
-6. [33 PII 카테고리](#33-pii-카테고리)
-7. [검출 정책 — 어떤 접두어·anchor 가 작동하는가](#검출-정책--어떤-접두어anchor-가-작동하는가)
-8. [처리 모드 + 치환 전략](#처리-모드--치환-전략)
-9. [부가 기능](#부가-기능)
-10. [FAQ](#faq)
-11. [개발](#개발)
-12. [라이선스](#라이선스)
+1. [왜 필요한가](#왜-필요한가)
+2. [주요 특징](#주요-특징)
+3. [설치](#설치)
+4. [사용 시나리오](#사용-시나리오)
+5. [평가 결과](#평가-결과)
+6. [사용법](#사용법)
+7. [33 PII 카테고리](#33-pii-카테고리)
+8. [검출 정책 — 어떤 접두어·anchor 가 작동하는가](#검출-정책--어떤-접두어anchor-가-작동하는가)
+9. [처리 모드 + 치환 전략](#처리-모드--치환-전략)
+10. [부가 기능](#부가-기능)
+11. [FAQ](#faq)
+12. [개발](#개발)
+13. [라이선스](#라이선스)
+
+---
+
+## 왜 필요한가
+
+RAG·LLM 파이프라인은 미정제 비정형 데이터를 그대로 인덱싱·검색해 모델에 넣습니다 — PII 가 **벡터 DB 와 응답 양쪽**에 노출됩니다.
+
+- **법적 의무** — 개인정보보호법(PIPA): 주민등록번호·건강정보 등 민감정보 처리 제한 (해외 GDPR·HIPAA 대응)
+- **주권·폐쇄망** — 공공기관 망분리 환경은 외부 API 로 PII 를 보낼 수 없음 → **오프라인 결정적 검출**이 필수
+- **신뢰·평판** — 유출 1건이 서비스 신뢰를 무너뜨림
+- **ML 보완** — NER·LLM 검출은 할루시네이션·재현 불가. 체크섬으로 검증되는 PII(RRN·카드·사업자)는 ko-pii 가 F1 ≈ 1.0 으로 확정 검출해 ML 의 빈틈을 메움
+
+ko-pii 는 RAG 의 **인제스트(벡터 DB 진입 전)와 검색(LLM 전달 전) 양단**에서 PII 를 차단합니다. 같은 인물은 같은 토큰으로 치환해 문맥을 보존하고(LlamaIndex·LangChain 연동 제공), Vault 로 권한 기반 복원과 감사 추적을 지원합니다.
 
 ---
 
@@ -459,6 +473,7 @@ for r in detect("신청인 880101-1234568"):
 | **검토 큐** | confidence 낮은 검출 → 사람 검토 → 오탐 어휘 자동 학습 | 코어 |
 | **HTML 리포트** | 정탐 초록 / 오탐 빨강 / 미탐 노랑 시각화 | 코어 |
 | **한자/로마자 변형** | `洪吉童` → `홍길동`, `Hong Gildong` → `홍길동` | 코어 |
+| **RAG 연동** | LlamaIndex·LangChain 검색 결과 PII 마스킹 (검색→마스킹→LLM) | `[llamaindex]` / `[langchain]` |
 
 ### 파서 상세
 
@@ -471,6 +486,24 @@ for r in detect("신청인 880101-1234568"):
 | PDF | [pdfplumber](https://pypi.org/project/pdfplumber/) (우선) / [pypdf](https://pypi.org/project/pypdf/) (fallback) | 텍스트 레이어만 추출 (스캔 PDF는 OCR 필요) |
 
 > **PDF 참고:** PDF는 글자 좌표 기반이라 칸별 공백·줄바꿈 삽입이 흔합니다. ko-pii는 내장 정규화 엔진(`text_normalizer`)으로 PII 패턴 중간의 불필요 공백/줄바꿈을 자동 보정합니다. pdfplumber가 pypdf보다 레이아웃 분석이 우수하므로 pdfplumber 설치를 권장합니다.
+
+### RAG 파이프라인 연동
+
+검색된 문서를 LLM 에 넣기 전에 PII 를 마스킹합니다. 한 번의 검색 결과 안에서 같은 인물은 같은 토큰(`<PERSON_1>`)으로 치환돼 문맥이 보존되고, `vault` 를 넘기면 답변 생성 후 `vault.reveal()` 로 복원할 수 있습니다.
+
+```python
+# LlamaIndex — node postprocessor (검색 → 마스킹 → LLM)
+from ko_pii.integrations.llamaindex import KoPiiNodePostprocessor
+
+qe = index.as_query_engine(
+    node_postprocessors=[KoPiiNodePostprocessor(mode="STRICT")]
+)
+
+# LangChain — Runnable 체인에 그대로 삽입
+from ko_pii.integrations.langchain import KoPiiRedactor
+
+chain = retriever | KoPiiRedactor(mode="STRICT") | prompt | llm
+```
 
 ---
 
