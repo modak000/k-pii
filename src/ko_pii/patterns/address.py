@@ -116,29 +116,31 @@ def _first_district_of(districts_str: str) -> str | None:
 
 
 def _extend_with_detail(det: DetectionResult, text: str) -> DetectionResult:
-    """주소 검출 결과 직후 동호수/괄호 상세가 이어지면 span 확장."""
+    """주소 검출 결과 직후 동호수/층/괄호 상세가 이어지면 span 확장.
+
+    반복 적용: "396 401호 12층" → 401호 잡고 → 12층 잡고 → 끝.
+    """
     pos = det.end
     extended_end = det.end
-    extended_text = det.text
 
-    # 동호수 패턴
-    m = _PATTERN_DETAIL.match(text, pos)
-    if m:
+    # 동호수/층 패턴 반복 적용 (401호 → 12층 순차 확장)
+    while True:
+        m = _PATTERN_DETAIL.match(text, pos)
+        if not m:
+            break
         extended_end = m.end()
-        extended_text = text[det.start:extended_end]
         pos = extended_end
 
     # 괄호 상세 "(신정동,롯데캐슬킹덤아파트)"
     m2 = _PATTERN_PAREN_DETAIL.match(text, pos)
     if m2:
         extended_end = m2.end()
-        extended_text = text[det.start:extended_end]
 
     if extended_end == det.end:
         return det
 
     from dataclasses import replace
-    return replace(det, text=extended_text.strip(), end=extended_end)
+    return replace(det, text=text[det.start:extended_end].strip(), end=extended_end)
 
 
 def detect(text: str) -> Iterator[DetectionResult]:
