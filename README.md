@@ -2,6 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Demo](https://img.shields.io/badge/demo-HuggingFace-yellow.svg)](https://huggingface.co/spaces/kimkim22/ko-pii-demo)
 
 **한국어 문서의 개인정보를 검출하고 가역적으로 가명화하는 Python 라이브러리.** 외부 ML 의존성 없이 룰 + 사전 + 체크섬만으로 동작. 공공 문서에서 특히 강하며, 어떤 ML 파이프라인의 전처리 레이어로도 활용 가능.
 
@@ -490,6 +491,14 @@ for r in detect("신청인 880101-1234568"):
 - **Presidio** — 영어 위주. 한국 특화 PII (RRN/FRN/여권 등) 부재
 - **openai/privacy-filter** — 다국어 일반 PII. 한국 핵심 14 카테고리 라벨 없음
 - **ko-pii** — 한국 특화 33 카테고리, 체크섬 검증, 법적 근거 자동 부착
+
+**Q6. 이름 단독 검출이 오탐이 많아요. 이름+전화번호 같이 있을 때만 차단할 수 있나요?**
+`PERMISSIVE` 모드 (CRITICAL만 차단) + `combined_risk` 조건부 재처리:
+```python
+result = Anonymizer(mode=ProcessingMode.PERMISSIVE).process(text)
+if result.combined_risk.combined_risk >= RiskLevel.HIGH:
+    result = Anonymizer(mode=ProcessingMode.STRICT).process(text)
+```
 
 ---
 
