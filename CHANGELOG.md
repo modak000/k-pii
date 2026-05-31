@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-31
+
+### Added
+- **주소 건물명 검출** — 도로명+번호 뒤 건물/단지명을 ADDRESS 에 포함. 사전 없이 위치로 식별:
+  - 번호와 `숫자 동/호/층` 사이에 끼인 토큰 (양쪽 anchor)
+  - 건물 접미사 38종 (빌딩·타워·센터·스퀘어·자이·래미안·푸르지오·힐스테이트·주공 등 실존 브랜드)
+  - "월드컵북로 396 누리꿈스퀘어 12층" → 전체 단일 ADDRESS
+- **건물명 가제티어** (`dictionaries.buildings`, `is_building_name`/`building_names`) — 접미사 없는 고유명("그랑서울" 등) 보완. 번들 gzip 리소스, **런타임 오프라인** 유지
+- **`scripts/build_address_gazetteer.py`** — 행정안전부 도로명주소 DB(business.juso.go.kr, KOGL Type 1)를 증류해 가제티어 생성. 빌드타임 도구
+
 ## [1.3.0] - 2026-05-31
 
 ### Added
@@ -58,7 +68,8 @@ Phase 9 — 실데이터 평가 + 룰 정제.
 
 전체 Phase 1~11 개발 히스토리는 git log 및 `docs/` 참조.
 
-[Unreleased]: https://github.com/modak000/ko-pii/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/modak000/ko-pii/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/modak000/ko-pii/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/modak000/ko-pii/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/modak000/ko-pii/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/modak000/ko-pii/compare/v1.0.0...v1.1.0

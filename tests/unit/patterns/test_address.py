@@ -51,3 +51,47 @@ class TestAddressNegative:
 
     def test_no_building_number(self):
         assert _detect_list("강남구 테헤란로") == []
+
+
+class TestAddressBuildingDetail:
+    """건물명/동·호·층 상세 확장 (도로명+번호 뒤)."""
+
+    def _addr(self, text):
+        return [r.text for r in _detect_list(text) if r.label == "ADDRESS"]
+
+    def test_floor_after_number(self):
+        assert self._addr("서울특별시 마포구 월드컵북로 396 12층") == [
+            "서울특별시 마포구 월드컵북로 396 12층"
+        ]
+
+    def test_dong_ho_chain(self):
+        assert self._addr("경기도 성남시 분당구 판교역로 235 103동 1502호") == [
+            "경기도 성남시 분당구 판교역로 235 103동 1502호"
+        ]
+
+    def test_building_name_bridged_to_floor(self):
+        # 건물명이 번호와 층 사이에 끼면 양쪽 anchor 로 함께 잡힌다
+        assert self._addr("서울특별시 마포구 월드컵북로 396 누리꿈스퀘어 12층") == [
+            "서울특별시 마포구 월드컵북로 396 누리꿈스퀘어 12층"
+        ]
+
+    def test_building_suffix_tail(self):
+        # 브랜드 접미사(스퀘어/래미안 등)로 끝나면 층 없이도 포함
+        assert self._addr("서울 강남구 테헤란로 152 강남파이낸스센터") == [
+            "강남구 테헤란로 152 강남파이낸스센터"
+        ]
+        assert self._addr("서울 강남구 테헤란로 152 래미안 30층") == [
+            "강남구 테헤란로 152 래미안 30층"
+        ]
+
+    def test_gazetteer_building_name(self):
+        # 접미사 없는 고유 건물명은 가제티어 멤버십으로 포함
+        assert self._addr("서울 종로구 종로 33 그랑서울 5층") == [
+            "종로구 종로 33 그랑서울 5층"
+        ]
+
+    def test_unknown_word_not_overextended(self):
+        # 가제티어에 없고 접미사도 아니고 뒤에 층도 없으면 확장 안 함
+        assert self._addr("서울 강남구 테헤란로 152 본사에서 회의") == [
+            "강남구 테헤란로 152"
+        ]

@@ -20,6 +20,7 @@ from ko_pii.core.types import DetectionResult, RiskLevel
 from ko_pii.dictionaries.districts import (
     is_country, is_common_dong, is_extra_city,
 )
+from ko_pii.dictionaries.buildings import is_building_name
 
 LABEL = "ADDRESS"
 LEGAL_BASIS = "개인정보보호법 제2조"
@@ -74,6 +75,29 @@ _PATTERN_PAREN_DETAIL = re.compile(
     r'\s*\([가-힣A-Za-z0-9,·\s]+\)'
 )
 
+# 건물명/단지명 — 도로명+번호 뒤 상세주소. 임의 고유명사라 사전 대신 위치로 식별.
+#  (a) bridge: 뒤에 숫자 동/호/층이 이어지면 양쪽 anchor 로 끼인 건물명
+#              ("월드컵북로 396 [누리꿈스퀘어] 12층")
+#  (b) tail:   건물 접미사로 끝나는 토큰 — 층 없이도 포함
+#              ("테헤란로 152 [강남파이낸스센터]")
+# 접미사 목록은 행정안전부 도로명주소 DB(건물명/공동주택명)에서 빈도순으로 보강 가능.
+_BLDG_SUFFIX = (
+    # 일반 건물 유형
+    "빌딩|타워|센터|스퀘어|플라자|프라자|오피스텔|아파트|맨션|하이츠|"
+    "캐슬|팰리스|레지던스|펜트하우스|"
+    # 아파트/주거 브랜드 (실존 건설사 브랜드)
+    "자이|래미안|푸르지오|더샵|아이파크|힐스테이트|디에이치|e편한세상|"
+    "위브|센트레빌|롯데캐슬|데시앙|스위첸|꿈에그린|베르디움|리슈빌|코아루|"
+    "우미린|한라비발디|효성해링턴|어울림|하늘채|호반써밋|아크로|써밋|주공"
+)
+_PATTERN_BLDG = re.compile(
+    r'\s+[가-힣A-Za-z0-9]{2,}(?=\s+\d+(?:동|호|층))'     # (a) 뒤에 동/호/층
+    r'|\s+[가-힣A-Za-z0-9]*(?:' + _BLDG_SUFFIX + r')'     # (b) 건물 접미사
+)
+
+# (c) 가제티어 — 접미사 없는 고유 건물명 ("그랑서울" 등). 다음 토큰만 추출해 멤버십 확인.
+_PATTERN_NEXT_TOKEN = re.compile(r'\s+([가-힣A-Za-z0-9]+)')
+
 # 대화체 단독 주소 — 시군구 또는 동 (번지 옵션), 광역 없음
 # 강한 anchor keyword 25자 윈도우 내 필수.
 _PATTERN_LOOSE = re.compile(
@@ -123,9 +147,18 @@ def _extend_with_detail(det: DetectionResult, text: str) -> DetectionResult:
     pos = det.end
     extended_end = det.end
 
-    # 동호수/층 패턴 반복 적용 (401호 → 12층 순차 확장)
+    # 동호수/층 + 건물명 반복 적용
+    #   "396 누리꿈스퀘어 12층" → [건물명] 누리꿈스퀘어 → [층] 12층 순차 확장
+    #   "396 401호 12층"        → [호] 401호 → [층] 12층
     while True:
         m = _PATTERN_DETAIL.match(text, pos)
+        if not m:
+            m = _PATTERN_BLDG.match(text, pos)
+        if not m:
+            # (c) 가제티어 멤버십 — 다음 토큰이 알려진 건물명이면 포함
+            mt = _PATTERN_NEXT_TOKEN.match(text, pos)
+            if mt and is_building_name(mt.group(1)):
+                m = mt
         if not m:
             break
         extended_end = m.end()

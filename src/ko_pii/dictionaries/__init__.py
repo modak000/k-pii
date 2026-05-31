@@ -32,6 +32,7 @@ from ko_pii.dictionaries.agency_titles import (
 )
 from ko_pii.dictionaries.field_labels import FIELD_LABELS, is_field_label
 from ko_pii.dictionaries.common_words import COMMON_WORDS, is_common_word
+from ko_pii.dictionaries.buildings import is_building_name, building_names
 
 __all__ = [
     # surnames
@@ -58,4 +59,6 @@ __all__ = [
     # other
     "FIELD_LABELS", "is_field_label",
     "COMMON_WORDS", "is_common_word",
+    # 건물명 가제티어 (juso 도로명주소 DB 기반)
+    "is_building_name", "building_names",
 ]

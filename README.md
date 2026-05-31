@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Demo](https://img.shields.io/badge/demo-HuggingFace-yellow.svg)](https://huggingface.co/spaces/kimkim22/ko-pii-demo)
+[![Demo](https://img.shields.io/badge/demo-HuggingFace-yellow.svg)](https://huggingface.co/spaces/modak000/ko-pii-demo)
 
 **한국어 문서의 개인정보를 검출하고 가역적으로 가명화하는 Python 라이브러리.** 외부 ML 의존성 없이 룰 + 사전 + 체크섬만으로 동작. 공공 문서에서 특히 강하며, 어떤 ML 파이프라인의 전처리 레이어로도 활용 가능.
 
@@ -360,7 +360,7 @@ for r in detect("신청인 880101-1234568"):
 | 카테고리 | 사전 규모 |
 |---|---|
 | 인명 (PERSON) | 성씨 286 + 직책 인접 + 17 거부 룰 |
-| 주소 (ADDRESS) | 광역 17 + 기초 226 + 빈출 동 150 |
+| 주소 (ADDRESS) | 광역 17 + 기초 226 + 빈출 동 150 + 건물 접미사 38 + 건물명 가제티어 |
 | 국적 (NATIONALITY) | 국가명 70+ (대한민국·미국·일본 등) |
 | 학력 (EDUCATION) | 대학 ~330 + 약칭 |
 | 전공 (MAJOR) | 학과 ~400 (KEDI 분류) |
